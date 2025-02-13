@@ -1,15 +1,16 @@
 % Representación de un Sudoku
 sudoku([
-    '.','.', 6 ,'.', 5 , 7 , 8 , 2 ,'.',
-     2 , 1 ,'.','.','.', 6 , 7 , 5 ,'.',
-     7 , 5 , 3 ,'.','.', 4 ,'.','.', 9 ,
-    '.', 6 ,'.','.','.', 5 , 3 ,'.','.',
-    '.','.','.', 7 ,'.','.', 4 ,'.', 2 ,
-     3 ,'.','.', 9 , 2 , 8 ,'.','.', 6 ,
-    '.', 2 ,'.', 5 , 4 ,'.','.','.', 1 ,
-    '.','.', 1 ,'.', 7 ,'.', 9 , 4 , 8 ,
-    '.','.', 9 ,'.','.', 1 ,'.', 7 ,'.',
-     
+    '.','.', 6 ,  '.', 5 , 7 ,   8 , 2 ,'.',
+     2 , 1 ,'.',  '.','.', 6 ,   7 , 5 ,'.',
+     7 , 5 , 3 ,  '.','.', 4 ,  '.','.', 9 ,
+
+    '.', 6 ,'.',  '.','.', 5 ,   3 ,'.','.',
+    '.','.','.',   7 ,'.','.',   4 ,'.', 2 ,
+     3 ,'.','.',   9 , 2 , 8 ,  '.','.', 6 ,
+
+    '.', 2 ,'.',   5 , 4 ,'.',  '.','.', 1 ,
+    '.','.', 1 ,  '.', 7 ,'.',   9 , 4 , 8 ,
+    '.','.', 9 ,  '.','.', 1 ,  '.', 7 ,'.'
 ]).
 % REGLAS DE EJECUCIÓN.
 % ?- sudoku(S), cuadrante(S,0,P).
@@ -31,6 +32,7 @@ mostrar_filas(Sudoku, Fila) :-
 % DEVOLVER FILA DE SUDOKU
 fila([A, B, C, D, E, F, G, H, I |_], 0, [A, B, C, D, E, F, G, H , I]).
 fila([_, _, _, _, _, _, _, _, _ | Cola], Pos, Fila) :-
+    Pos > 0,
     P is Pos - 1,
     fila(Cola, P, Fila).
 
@@ -79,3 +81,52 @@ unir(X,Y,L) :-
     append(X,Y,ZR),
     eliminar_repetidos(ZR,Z),
     sort(Z,L).
+
+
+/*presentes(S, Presentes):-
+    length(S, 81),
+    presentes_aux(S, 0, [], Presentes).
+
+presentes_aux(_, 81, Acumulador, Presentes):-
+    reverse(Acumulador, Presentes).
+presentes_aux(S, Cont, Acumulador, Presentes) :-
+    Cont < 81,
+    fila(S, Cont // 9, F),
+    columna(S, Cont mod 9, C),
+    cuadrante(S, (Cont // 27) * 3 + ((Cont mod 9) // 3), Q),
+    unir(F, C, FC), 
+    unir(FC, Q, P),
+    I is Cont + 1,
+    presentes_aux(S, I, [P|Acumulador], Presentes).
+*/
+
+
+presentes(S, Presentes):-
+    length(S, 81),
+    presentes_aux(S, 0, [], Presentes).
+
+presentes_aux(_, 81, Acumulador, Presentes):-
+    reverse(Acumulador, Presentes).
+presentes_aux(S, Cont, Acumulador, Presentes) :-
+    Cont < 81,
+    FilaIndex is Cont // 9,
+    ColIndex is Cont mod 9,
+    CuadIndex is (Cont // 27) * 3 + ((Cont mod 9) // 3),
+
+    fila(S, FilaIndex, F),
+    columna(S, ColIndex, C),
+    cuadrante(S, CuadIndex, Q),
+
+    unir(F,C,FC), unir(FC, Q, P),
+
+    I is Cont + 1,
+    presentes_aux(S, I, [P|Acumulador], Presentes).
+
+
+posibles(S, Posibles) :-
+    presentes(S, Presentes),
+    write("Presentes calculados"),
+    maplist(posibles_aux, Presentes, Posibles).
+
+posibles_aux(Presentes, Posibles) :-
+    findall(N, (between(1,9,N), \+ member(N, Presentes)), Posibles).
