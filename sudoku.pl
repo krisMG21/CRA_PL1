@@ -6,7 +6,7 @@ fila([_, _, _, _, _, _, _, _, _ | Cola], Pos, Fila) :-
 
 % DEVOLVER COLUMNA DE SUDOKU
 columna(Matriz, Pos, Columna) :-
-    columna_aux(Matriz, Pos, [], Columna).
+    columna_aux(Matriz, Pos, 9, [], Columna).
 columna_aux(_, _, 0, Acumulador, Columna) :-
     reverse(Acumulador, Columna).
 columna_aux(Matriz, Indice, Restantes, Acumulador, Columna) :-
@@ -15,6 +15,7 @@ columna_aux(Matriz, Indice, Restantes, Acumulador, Columna) :-
     R is Restantes - 1,
     columna_aux(Matriz, I, R, [Elemento|Acumulador], Columna).
 
+% UNIR POSIBILIDADES
 eliminar_repetidos([], []).
 eliminar_repetidos([H|T], R) :-
     member(H, T), % Si H está en el resto de la lista, lo ignoramos
@@ -23,7 +24,7 @@ eliminar_repetidos([H|T], [H|R]) :-
     \+ member(H, T), % Si H no está en el resto de la lista, lo mantenemos
     eliminar_repetidos(T, R).
 
-unir_lista(X,Y,L) :-
+unir(X,Y,L) :-
     append(X,Y,ZR),
     eliminar_repetidos(ZR,Z),
     sort(Z,L).
