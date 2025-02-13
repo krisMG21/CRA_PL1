@@ -1,16 +1,16 @@
 % Representación de un Sudoku
 sudoku([
-    '.','.', 6 ,  '.', 5 , 7 ,   8 , 2 ,'.',
-     2 , 1 ,'.',  '.','.', 6 ,   7 , 5 ,'.',
-     7 , 5 , 3 ,  '.','.', 4 ,  '.','.', 9 ,
+    '.','.', 9 ,   6 ,'.','.',  '.', 1 ,'.',
+     8 ,'.','.',  '.','.', 1 ,  '.', 9 ,'.',
+     7 ,'.','.',  '.','.','.',  '.','.', 8 ,
 
-    '.', 6 ,'.',  '.','.', 5 ,   3 ,'.','.',
-    '.','.','.',   7 ,'.','.',   4 ,'.', 2 ,
-     3 ,'.','.',   9 , 2 , 8 ,  '.','.', 6 ,
+    '.', 3 ,'.',  '.', 6 ,'.',  '.','.','.',
+    '.', 4 ,'.',   1 ,'.', 9 ,  '.','.', 5 ,
+     9 ,'.','.',  '.','.','.',  '.','.','.',
 
-    '.', 2 ,'.',   5 , 4 ,'.',  '.','.', 1 ,
-    '.','.', 1 ,  '.', 7 ,'.',   9 , 4 , 8 ,
-    '.','.', 9 ,  '.','.', 1 ,  '.', 7 ,'.'
+    '.', 8 ,'.',   9 ,'.','.',   5 , 4 ,'.',
+     6 ,'.','.',   7 , 1 ,'.',  '.','.', 3 ,
+    '.','.', 5 ,  '.', 8 , 4 ,  '.','.', 9
 ]).
 % REGLAS DE EJECUCIÓN.
 % ?- sudoku(S), cuadrante(S,0,P).
@@ -126,7 +126,11 @@ presentes_aux(S, Cont, Acumulador, Presentes) :-
 posibles(S, Posibles) :-
     presentes(S, Presentes),
     write("Presentes calculados"),
-    maplist(posibles_aux, Presentes, Posibles).
+    maplist(posibles_aux, S, Presentes, Posibles).
 
-posibles_aux(Presentes, Posibles) :-
-    findall(N, (between(1,9,N), \+ member(N, Presentes)), Posibles).
+posibles_aux(Casilla, Presentes, Posibles) :-
+    (Casilla \= '.' ->
+        Posibles = '.'
+    ;
+        findall(N, (between(1,9,N), \+ member(N, Presentes)), Posibles)
+    ).
