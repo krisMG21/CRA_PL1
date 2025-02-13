@@ -66,25 +66,13 @@ cuadrante(Sudoku, NumCuadrante, Elementos) :-
     Base is (FilaBase * 9) + ColBase,
     
     % Calcular todos los índices necesarios
-    I1 is Base,
-    I2 is Base + 1,
-    I3 is Base + 2,
-    I4 is Base + 9,
-    I5 is Base + 10,
-    I6 is Base + 11,
-    I7 is Base + 18,
-    I8 is Base + 19,
-    I9 is Base + 20,
+    I1 is Base,      I2 is Base + 1,     I3 is Base + 2,
+    I4 is Base + 9,  I5 is Base + 10,    I6 is Base + 11,
+    I7 is Base + 18, I8 is Base + 19,    I9 is Base + 20,
     
     % Extraer elementos usando índices calculados
-    nth0(I1, Sudoku, E1),
-    nth0(I2, Sudoku, E2),
-    nth0(I3, Sudoku, E3),
-    nth0(I4, Sudoku, E4),
-    nth0(I5, Sudoku, E5),
-    nth0(I6, Sudoku, E6),
-    nth0(I7, Sudoku, E7),
-    nth0(I8, Sudoku, E8),
-    nth0(I9, Sudoku, E9),
+    nth0(I1, Sudoku, E1),    nth0(I2, Sudoku, E2),     nth0(I3, Sudoku, E3),
+    nth0(I4, Sudoku, E4),    nth0(I5, Sudoku, E5),     nth0(I6, Sudoku, E6),
+    nth0(I7, Sudoku, E7),    nth0(I8, Sudoku, E8),     nth0(I9, Sudoku, E9),
     
     Elementos = [E1, E2, E3, E4, E5, E6, E7, E8, E9].
