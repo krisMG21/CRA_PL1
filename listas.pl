@@ -41,6 +41,8 @@ igual([X|Cola1], [X|Cola2]) :- igual(Cola1, Cola2).
 concatena([], L, L).
 concatena([Cabeza|Cola], L2, [Cabeza|L3]) :- concatena(Cola, L2, L3).
 
+% Existe: append(L1, L2, Res)
+
 % encuentra prefijos
 prefijo(Prefijo, L) :- concatena(Prefijo, _, L).
 

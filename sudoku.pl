@@ -1,3 +1,5 @@
+:- consult("regla0.pl").
+
 % Representación de un Sudoku
 sudoku([
     '.','.', 9 ,   6 ,'.','.',  '.', 1 ,'.',
@@ -125,7 +127,6 @@ presentes_aux(S, Cont, Acumulador, Presentes) :-
 % NUMEROS POSIBLES POR CASILLA
 posibles(S, Posibles) :-
     presentes(S, Presentes),
-    write("Presentes calculados"),
     maplist(posibles_aux, S, Presentes, Posibles).
 
 posibles_aux(Casilla, Presentes, Posibles) :-
@@ -134,3 +135,12 @@ posibles_aux(Casilla, Presentes, Posibles) :-
     ;
         findall(N, (between(1,9,N), \+ member(N, Presentes)), Posibles)
     ).
+
+% MAIN EXECUTIONS
+
+% TEST REGLA 0
+:-  sudoku(S),
+    posibles(S, P),
+    regla0(S, P, News),
+    write("Aplicar regla 0"), nl,
+    mostrar_sudoku(News).
