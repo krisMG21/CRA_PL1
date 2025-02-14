@@ -139,8 +139,41 @@ posibles_aux(Casilla, Presentes, Posibles) :-
 % MAIN EXECUTIONS
 
 % TEST REGLA 0
-:-  sudoku(S),
-    posibles(S, P),
-    regla0(S, P, News),
-    write("Aplicar regla 0"), nl,
-    mostrar_sudoku(News).
+main():-
+    sudoku(S),
+    
+    write("Sudoku inicial:"), nl,
+    mostrar_sudoku(S),
+
+    resolver(S, FinalS),
+    write("Sudoku resuelto:"), nl,
+    mostrar_sudoku(FinalS).
+
+resolver(S, P, FinalS):-
+    regla0(S, P, NewS),
+    (S \= NewS ->
+        posibles(S, NewP),
+        write("Regla 0"), nl,
+        mostrar_sudoku(NewS),
+        resolver(NewS, NewP, FinalS)  
+    ),
+
+    %regla 1, recursión si cambia el sudoku, cambia Sudoku
+    /*
+    S = News,
+    regla1(S, P, NewS),
+    (S \= NewS ->
+        write("Regla 1"), nl,
+        mostrar_sudoku(NewS),
+        resolver(NewS, FinalS)        
+        )
+    */
+
+    %regla 2, recursión si cambia el sudoku, cambia Posibilidades
+    /*
+    regla2()
+    */
+
+    %regla 3, recursión si cambia el sudoku, cambia Posibilidades
+    
+    FinalS = S.
