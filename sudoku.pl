@@ -68,7 +68,7 @@ cuadrante(Sudoku, NumCuadrante, Elementos) :-
     
     Elementos = [E1, E2, E3, E4, E5, E6, E7, E8, E9].
 
-% UNIR POSIBILIDADES
+% UNIR NUMEROS SIN REPETIR
 eliminar_repetidos([], []).
 eliminar_repetidos([H|T], R) :-
     member(H, T), % Si H está en el resto de la lista, lo ignoramos
@@ -100,7 +100,7 @@ presentes_aux(S, Cont, Acumulador, Presentes) :-
     presentes_aux(S, I, [P|Acumulador], Presentes).
 */
 
-
+% NUMEROS PRESENTES QUE AFECTAN A CADA CASILLA
 presentes(S, Presentes):-
     length(S, 81),
     presentes_aux(S, 0, [], Presentes).
@@ -122,7 +122,7 @@ presentes_aux(S, Cont, Acumulador, Presentes) :-
     I is Cont + 1,
     presentes_aux(S, I, [P|Acumulador], Presentes).
 
-
+% NUMEROS POSIBLES POR CASILLA
 posibles(S, Posibles) :-
     presentes(S, Presentes),
     write("Presentes calculados"),
