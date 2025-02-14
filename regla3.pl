@@ -1,4 +1,4 @@
-regla3(S, P, NewP):-
+regla3(_, _, _):-
+%regla3(S, P, NewP):-
     % TODO: Lo mismo que la 3 pero con 3 casillas / numeros
-
-    .
+    false.

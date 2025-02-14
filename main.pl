@@ -1,4 +1,7 @@
 :- consult("regla0.pl").
+:- consult("regla1.pl").
+:- consult("regla2.pl").
+:- consult("regla3.pl").
 
 % Representación de un Sudoku
 sudoku([
@@ -139,26 +142,54 @@ posibles_aux(Casilla, Presentes, Posibles) :-
 % MAIN EXECUTIONS
 
 % TEST REGLA 0
-main():-
+main :-
     sudoku(S),
-    
     write("Sudoku inicial:"), nl,
     mostrar_sudoku(S),
-
-    resolver(S, FinalS),
-    write("Sudoku resuelto:"), nl,
+    posibles(S, P),
+    resolver(S, P, FinalS),
+    write("Sudoku resuelto (total o parcialmente):"), nl,
     mostrar_sudoku(FinalS).
 
-resolver(S, P, FinalS):-
-    regla0(S, P, NewS),
-    (S \= NewS ->
-        posibles(S, NewP),
-        write("Regla 0"), nl,
+resolver(S, P, FinalS) :-
+    (aplicar_reglas(S, P, NewS, NewP) ->
         mostrar_sudoku(NewS),
-        resolver(NewS, NewP, FinalS)  
-    ),
+        resolver(NewS, NewP, FinalS)
+    ;
+        FinalS = S  % No se aplicó ninguna regla, devolvemos el Sudoku actual
+    ).
 
+aplicar_reglas(S, P, NewS, NewP) :-
+    (regla0(S, P, TempS), S \= TempS ->
+        NewS = TempS,
+        posibles(NewS, NewP),
+        write("Regla 0 aplicada"), nl
+    ;
     %regla 1, recursión si cambia el sudoku, cambia Sudoku
+        (regla1(S, P, TempS), S \= TempS -> 
+            NewS = TempS,
+            posibles(NewS, NewP),
+            write("Regla 1 aplicada"), nl
+        ;
+        %regla 2, recursión si cambia el sudoku, cambia Posibilidades
+            (regla2(S, P, TempP), P \= TempP ->
+                NewP = TempP,
+                write("Regla 2 aplicada"), nl
+            ;    
+            %regla 3, recursión si cambia el sudoku, cambia Posibilidades
+                (regla3(S, P, TempP), P \= TempP ->
+                    NewP = TempP,
+                    write("Regla 3 aplicada"), nl
+                ;
+                    false  % Si ninguna regla se aplicó, retornamos false               
+                )                
+            )
+        )
+    ).
+
+% Definiciones de regla0, regla1, etc.
+
+
     /*
     S = News,
     regla1(S, P, NewS),
@@ -169,11 +200,6 @@ resolver(S, P, FinalS):-
         )
     */
 
-    %regla 2, recursión si cambia el sudoku, cambia Posibilidades
     /*
     regla2()
     */
-
-    %regla 3, recursión si cambia el sudoku, cambia Posibilidades
-    
-    FinalS = S.
