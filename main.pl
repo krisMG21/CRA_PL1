@@ -1,3 +1,4 @@
+% IMPORT REGLAS
 :- consult("regla0.pl").
 :- consult("regla1.pl").
 :- consult("regla2.pl").
@@ -29,7 +30,7 @@ mostrar_sudoku(Sudoku) :-
 mostrar_filas([], _).
 mostrar_filas(Sudoku, Fila) :-
     length(FilaActual, 9), % Tomar 9 elementos
-    append(FilaActual, Resto, Sudoku),
+    append(FilaActual, Resto, Sudoku), % Sacar el resto de elementos
     write(FilaActual), nl,
     SiguienteFila is Fila + 1,
     mostrar_filas(Resto, SiguienteFila).
@@ -40,6 +41,16 @@ fila([_, _, _, _, _, _, _, _, _ | Cola], Pos, Fila) :-
     Pos > 0,
     P is Pos - 1,
     fila(Cola, P, Fila).
+
+% Por si os mola mas
+/*
+fila(Sudoku, Pos, Fila) :-
+    length(Fila, 9),
+    Offset is Pos * 9,
+    append(Prefijo, Resto, Sudoku),
+    length(Prefijo, Offset),
+    append(Fila, _, Resto).
+*/
 
 % DEVOLVER COLUMNA DE SUDOKU
 columna(Matriz, Pos, Columna) :-
@@ -87,24 +98,6 @@ unir(X,Y,L) :-
     eliminar_repetidos(ZR,Z),
     sort(Z,L).
 
-
-/*presentes(S, Presentes):-
-    length(S, 81),
-    presentes_aux(S, 0, [], Presentes).
-
-presentes_aux(_, 81, Acumulador, Presentes):-
-    reverse(Acumulador, Presentes).
-presentes_aux(S, Cont, Acumulador, Presentes) :-
-    Cont < 81,
-    fila(S, Cont // 9, F),
-    columna(S, Cont mod 9, C),
-    cuadrante(S, (Cont // 27) * 3 + ((Cont mod 9) // 3), Q),
-    unir(F, C, FC), 
-    unir(FC, Q, P),
-    I is Cont + 1,
-    presentes_aux(S, I, [P|Acumulador], Presentes).
-*/
-
 % NUMEROS PRESENTES QUE AFECTAN A CADA CASILLA
 presentes(S, Presentes):-
     length(S, 81),
@@ -138,6 +131,7 @@ posibles_aux(Casilla, Presentes, Posibles) :-
     ;
         findall(N, (between(1,9,N), \+ member(N, Presentes)), Posibles)
     ).
+
 
 % MAIN EXECUTIONS
 
@@ -186,20 +180,3 @@ aplicar_reglas(S, P, NewS, NewP) :-
             )
         )
     ).
-
-% Definiciones de regla0, regla1, etc.
-
-
-    /*
-    S = News,
-    regla1(S, P, NewS),
-    (S \= NewS ->
-        write("Regla 1"), nl,
-        mostrar_sudoku(NewS),
-        resolver(NewS, FinalS)        
-        )
-    */
-
-    /*
-    regla2()
-    */

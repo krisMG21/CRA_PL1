@@ -8,6 +8,8 @@ longitud_acu(Longitud, Longitud, []).
 longitud2(Longitud, Lista) :- longitud_acu(Longitud, 0, Lista).
 
 % MAXIMO
+max(Maximo, [Cabeza|Cola]) :- max_acu(Maximo, Cabeza, [Cabeza|Cola]).
+
 max_acu(Maximo, Acumulador, [Cabeza|Cola]) :-
     (Cabeza < Acumulador ->
         max_acu(Maximo, Acumulador, Cola)
@@ -16,9 +18,11 @@ max_acu(Maximo, Acumulador, [Cabeza|Cola]) :-
     ).
 
 max_acu(Acumulador, Acumulador, []).
-max(Maximo, [Cabeza|Cola]) :- max_acu(Maximo, Cabeza, [Cabeza|Cola]).
+
 
 % MINIMO
+min(Minimo, [Cabeza|Cola]) :- min_acu(Minimo, Cabeza, [Cabeza|Cola]).
+
 min_acu(Minimo, Acumulador, [Cabeza|Cola]) :-
     (Cabeza > Acumulador ->
         min_acu(Minimo, Acumulador, Cola)
@@ -27,7 +31,7 @@ min_acu(Minimo, Acumulador, [Cabeza|Cola]) :-
     ).
 
 min_acu(Acumulador, Acumulador, []).
-min(Minimo, [Cabeza|Cola]) :- min_acu(Minimo, Cabeza, [Cabeza|Cola]).
+
 
 % MIEMBRO
 miembro(X, [X|_]).
