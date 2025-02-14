@@ -1,23 +1,29 @@
+/**
+CONTENIDO
+Este archivo Prolog contiene todo lo que respecta a:
+
+* Consultas de filas, columnas y cuadrantes sobre el sudoku
+* Lectura de numeros presentes en las filas, columnas y cuadrantes adyacentes a una
+celda
+* Cálculo de numeros posibles en una casilla vacía en base a los presentes
+* Uso de reglas para resolver un sudoku dado (reglas importadas dede reglai.pl)
+
+MODO DE USO
+Para elegir comodamente el sudoku a resolver, lo asignaremos desde consola y lo introduciremos
+al main tal que:
+
+?- sudoku_x(S), main(S).
+
+*/
+
+
 % IMPORT REGLAS
+:- consult("sudokus.pl").
 :- consult("regla0.pl").
 :- consult("regla1.pl").
 :- consult("regla2.pl").
 :- consult("regla3.pl").
 
-% Representación de un Sudoku
-sudoku([
-    '.','.', 9 ,   6 ,'.','.',  '.', 1 ,'.',
-     8 ,'.','.',  '.','.', 1 ,  '.', 9 ,'.',
-     7 ,'.','.',  '.','.','.',  '.','.', 8 ,
-
-    '.', 3 ,'.',  '.', 6 ,'.',  '.','.','.',
-    '.', 4 ,'.',   1 ,'.', 9 ,  '.','.', 5 ,
-     9 ,'.','.',  '.','.','.',  '.','.','.',
-
-    '.', 8 ,'.',   9 ,'.','.',   5 , 4 ,'.',
-     6 ,'.','.',   7 , 1 ,'.',  '.','.', 3 ,
-    '.','.', 5 ,  '.', 8 , 4 ,  '.','.', 9
-]).
 % REGLAS DE EJECUCIÓN.
 % ?- sudoku(S), cuadrante(S,0,P).
 % ?- sudoku(S), fila(S, 2, Fila).
@@ -136,14 +142,19 @@ posibles_aux(Casilla, Presentes, Posibles) :-
 % MAIN EXECUTIONS
 
 % TEST REGLA 0
-main :-
-    sudoku(S),
+main(S) :-
     write("Sudoku inicial:"), nl,
     mostrar_sudoku(S),
     posibles(S, P),
+    %mostrar_sudoku(P),     % mostrar posibilidades
     resolver(S, P, FinalS),
-    write("Sudoku resuelto (total o parcialmente):"), nl,
+    (member('.', FinalS) ->
+        write("Sudoku resuelto parcialmente:"), nl
+    ;
+        write("Sudoku resuelto totalmente:"), nl
+    ),
     mostrar_sudoku(FinalS).
+
 
 resolver(S, P, FinalS) :-
     (aplicar_reglas(S, P, NewS, NewP) ->
