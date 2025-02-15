@@ -16,57 +16,37 @@ La diferencia clave es que en posibles/2 solo descartamos números ocupados, mie
 
 regla1(S, P, NewS) :-
     obtener_indices_celdas_vacias(S, Vacias),  % Obtener índices de celdas vacías
-    aplicar_regla1_celdas(Vacias, S, P, TempS),
-    (TempS \= S -> NewS = TempS ; NewS = S).  % Solo actualiza si hubo cambios
+    aplicar_regla1_celdas(Vacias, S, P, NewS).
 
 % Obtener índices de celdas vacías (donde S tiene '.')
 obtener_indices_celdas_vacias(S, Vacias) :-
-    findall(I, (nth0(I, S, '.'), between(0, 80, I)), Vacias).
+    findall(I, (nth0(I, S, '.'), I < 81), Vacias).
 
 % Aplicar regla1 a cada celda vacía
 aplicar_regla1_celdas([], S, _, S).
 aplicar_regla1_celdas([I|Resto], S, P, NewS) :-
-    nth0(I, P, Posibles),  % Posibles valores de la celda I
-    (Posibles \= '.',  % Si la celda está vacía y tiene posibles
-     encontrar_numero_unico(I, P, Numero) ->  % Buscar número único
-        replace(I, S, Numero, TempS),  % Asignar número a la celda
-        aplicar_regla1_celdas(Resto, TempS, P, NewS)
+    % Si en la celda I hay posibles, encontrar uno unico en F C y Q
+    (nth0(I, P, Posibles), Posibles \= '.', encontrar_numero_unico(I, P, Numero) ->
+        replace(I, S, Numero, TempS)
     ;
-        aplicar_regla1_celdas(Resto, S, P, NewS)
-    ).
+        TempS = S
+    ),
+    aplicar_regla1_celdas(Resto, TempS, P, NewS).
 
-% Buscar número único en fila, columna o cuadrante
+
 encontrar_numero_unico(Indice, P, Numero) :-
-    get_fila(Indice, FilaIndices),  % Índices de la fila
-    get_columna(Indice, ColumnaIndices),  % Índices de la columna
-    get_cuadrante(Indice, CuadranteIndices),  % Índices del cuadrante
-    
-    nth0(Indice, P, MisPosibles),  % Posibles de la celda actual
-    
-    % Buscar único en FILA
-    (buscar_en_grupo(MisPosibles, FilaIndices, P, Numero) -> true ;
-    % Buscar único en COLUMNA
-    (buscar_en_grupo(MisPosibles, ColumnaIndices, P, Numero) -> true ;
-    % Buscar único en CUADRANTE
-    buscar_en_grupo(MisPosibles, CuadranteIndices, P, Numero))).
+    % Obtiene los posibles de la celda actual y busca un numero que solo sea posible una
+    % vez en una F / C / Q
+    nth0(Indice, P, MisPosibles),
+    (get_fila(Indice, FilaIndices),buscar_en_grupo(MisPosibles, FilaIndices, P, Numero);
+     get_columna(Indice, ColumnaIndices), buscar_en_grupo(MisPosibles, ColumnaIndices, P, Numero);
+     get_cuadrante(Indice, CuadranteIndices), buscar_en_grupo(MisPosibles, CuadranteIndices, P, Numero)).
 
 % Verifica si un número aparece solo una vez en un grupo (fila/columna/cuadrante)
 buscar_en_grupo(MisPosibles, GrupoIndices, P, Numero) :-
     member(N, MisPosibles),
-    list_posibles_grupo(GrupoIndices, P, ListasGrupo),
-    count_ocurrencias(N, ListasGrupo, 1),
+    findall(Lista, (member(I, GrupoIndices), nth0(I, P, Lista), Lista \= '.', member(N, Lista)), [_]),
     Numero = N.
-
-% Obtener todas las listas de posibles de un grupo
-list_posibles_grupo(Indices, P, Listas) :-
-    findall(Lista, (member(I, Indices), nth0(I, P, Lista)), Listas).
-
-% Contar ocurrencias de N en listas de posibles (excluyendo la celda actual)
-count_ocurrencias(N, Listas, Count) :-
-    include(contains(N), Listas, Filtered),
-    length(Filtered, Count).
-
-contains(N, Lista) :- member(N, Lista).
 
 % Helpers para obtener índices de fila/columna/cuadrante
 % Helpers para obtener índices de fila/columna/cuadrante
@@ -88,6 +68,7 @@ get_cuadrante(Indice, CuadranteIndices) :-
         between(0, 2, DC),
         I is (FilaStart + DF)*9 + (ColStart + DC)), 
         CuadranteIndices).
+
 % Reemplazar elemento en lista
 replace(Index, List, Elem, NewList) :-
     nth0(Index, List, _, Temp),
