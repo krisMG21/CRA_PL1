@@ -37,18 +37,11 @@ aplicar_regla1_celdas([I|Resto], S, P, NewS) :-
 
 % Buscar número único en fila, columna o cuadrante
 encontrar_numero_unico(Indice, P, Numero) :-
-    get_fila(Indice, FilaIndices),  % Índices de la fila
-    get_columna(Indice, ColumnaIndices),  % Índices de la columna
-    get_cuadrante(Indice, CuadranteIndices),  % Índices del cuadrante
-    
-    nth0(Indice, P, MisPosibles),  % Posibles de la celda actual
-    
-    % Buscar único en FILA
-    (buscar_en_grupo(MisPosibles, FilaIndices, P, Numero) -> true ;
-    % Buscar único en COLUMNA
-    (buscar_en_grupo(MisPosibles, ColumnaIndices, P, Numero) -> true ;
-    % Buscar único en CUADRANTE
-    buscar_en_grupo(MisPosibles, CuadranteIndices, P, Numero))).
+    nth0(Indice, P, MisPosibles),
+    (get_fila(Indice, FilaIndices), buscar_en_grupo(MisPosibles, FilaIndices, P, Numero);
+     get_columna(Indice, ColumnaIndices), buscar_en_grupo(MisPosibles, ColumnaIndices, P, Numero);
+     get_cuadrante(Indice, CuadranteIndices), buscar_en_grupo(MisPosibles, CuadranteIndices, P, Numero)).
+
 
 % Verifica si un número aparece solo una vez en un grupo (fila/columna/cuadrante)
 buscar_en_grupo(MisPosibles, GrupoIndices, P, Numero) :-
