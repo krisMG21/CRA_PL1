@@ -171,9 +171,8 @@ aplicar_reglas(S, P, NewS, NewP) :-
         write("Regla 0 aplicada"), nl
     ;
     %regla 1, recursión si cambia el sudoku, cambia Sudoku
-        (regla1(S, P, TempS), S \= TempS -> 
-            NewS = TempS,
-            posibles(NewS, NewP),
+        (regla1(S, P, TempP), S \= TempP -> 
+            NewP = TempP,
             write("Regla 1 aplicada"), nl
         ;
         %regla 2, recursión si cambia el sudoku, cambia Posibilidades
