@@ -94,10 +94,10 @@ cuadrante(Sudoku, NumCuadrante, Elementos) :-
 eliminar_repetidos([], []).
 eliminar_repetidos([H|T], R) :-
     member(H, T), % Si H está en el resto de la lista, lo ignoramos
-    eliminar_repetidos(T, R).
+    eliminar_repetidos(T, R).    
 eliminar_repetidos([H|T], [H|R]) :-
     \+ member(H, T), % Si H no está en el resto de la lista, lo mantenemos
-    eliminar_repetidos(T, R).
+    eliminar_repetidos(T, R).
 
 unir(X,Y,L) :-
     append(X,Y,ZR),
@@ -110,7 +110,8 @@ presentes(S, Presentes):-
     presentes_aux(S, 0, [], Presentes).
 
 presentes_aux(_, 81, Acumulador, Presentes):-
-    reverse(Acumulador, Presentes).
+    reverse(Acumulador, Presentes), 
+    !.
 presentes_aux(S, Cont, Acumulador, Presentes) :-
     Cont < 81,
     FilaIndex is Cont // 9,
@@ -120,8 +121,9 @@ presentes_aux(S, Cont, Acumulador, Presentes) :-
     fila(S, FilaIndex, F),
     columna(S, ColIndex, C),
     cuadrante(S, CuadIndex, Q),
-
     unir(F,C,FC), unir(FC, Q, P),
+
+    !,
 
     I is Cont + 1,
     presentes_aux(S, I, [P|Acumulador], Presentes).
