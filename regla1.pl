@@ -14,7 +14,7 @@ La diferencia clave es que en posibles/2 solo descartamos números ocupados, mie
 
 */
 
-regla1(S, P, NewS) :-
+regla1(P, NewS) :-
     obtener_indices_celdas_vacias(S, Vacias),  % Obtener índices de celdas vacías
     aplicar_regla1_celdas(Vacias, S, P, TempS),
     (TempS \= S -> NewS = TempS ; NewS = S).  % Solo actualiza si hubo cambios
