@@ -142,7 +142,6 @@ posibles_aux(Casilla, Presentes, Posibles) :-
 
 
 % MAIN EXECUTIONS
-
 % TEST REGLA 0
 main(S) :-
     write("Sudoku inicial:"), nl,
@@ -157,38 +156,47 @@ main(S) :-
     ),
     mostrar_sudoku(FinalS).
 
-
 resolver(S, P, FinalS) :-
-    (aplicar_reglas(S, P, NewS, NewP) ->
+    (aplicar_reglas(S, P, NewS, NewP), % Aplica todas las reglas en 1 iteración
+     (S \= NewS ; P \= NewP) % ¿Hubo cambios?
+    ->
         mostrar_sudoku(NewS),
-        resolver(NewS, NewP, FinalS)
+        resolver(NewS, NewP, FinalS) % Nueva iteración
     ;
-        FinalS = S  % No se aplicó ninguna regla, devolvemos el Sudoku actual
+        FinalS = S % Fin: no hay cambios
     ).
 
 aplicar_reglas(S, P, NewS, NewP) :-
+    % Paso 1: Aplicar Regla 0 (celdas obvias)
     (regla0(S, P, TempS), S \= TempS ->
+        write('REGLA 0 APLICADA!'), nl,
+        posibles(TempS, TempP), % Recalcular posibilidades
         NewS = TempS,
-        posibles(NewS, NewP),
-        write("Regla 0 aplicada"), nl
+        NewP = TempP
     ;
-    %regla 1, recursión si cambia el sudoku, cambia Sudoku
-        (regla1(P, TempP), S \= TempP -> 
-            NewP = TempP,
-            write("Regla 1 aplicada"), nl
+        % Paso 2: Si no hubo cambios en S, aplicar Regla 1
+        (regla1(S, P, TempP1), P \= TempP1 ->
+            write('REGLA 1 APLICADA!'), nl,
+            NewS = S,
+            NewP = TempP1
         ;
-        %regla 2, recursión si cambia el sudoku, cambia Posibilidades
-            (regla2(P, TempP), P \= TempP ->
-                NewP = TempP,
-                write("Regla 2 aplicada"), nl
-            ;    
-            %regla 3, recursión si cambia el sudoku, cambia Posibilidades
-                (regla3(P, TempP), P \= TempP ->
-                    NewP = TempP,
-                    write("Regla 3 aplicada"), nl
+            % Paso 3: Si no hubo cambios en P, aplicar Regla 2
+            (regla2(S, P, TempP2), P \= TempP2 ->
+                write('REGLA 2 APLICADA!'), nl,
+                NewS = S,
+                NewP = TempP2
+            ;
+                % Paso 4: Si no hubo cambios, aplicar Regla 3
+                (regla3(S, P, TempP3), P \= TempP3 ->
+                    write('REGLA 3 APLICADA!'), nl,
+                    NewS = S,
+                    NewP = TempP3
                 ;
-                    false  % Si ninguna regla se aplicó, retornamos false               
-                )                
+                    % Ninguna regla aplicó cambios
+                    write('NINGUNA REGLA APLICADA!'), nl,
+                    NewS = S,
+                    NewP = P
+                )
             )
         )
     ).
