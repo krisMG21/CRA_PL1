@@ -1,8 +1,8 @@
 % Regla 1: Si un número aparece solo en una lista de posibilidades de una unidad (fila, columna, bloque), fijarlo allí y eliminarlo de las demás.
-regla1(_, P, NewP) :-
-    write("Estado inicial: "), write(P), nl,
+regla1(P, NewP) :-
+    %write("Estado inicial: "), write(P), nl,
     process_all_units(P, NewP),
-    write("Estado despues de aplicar Regla 1: "), write(NewP), nl,
+    %write("Estado despues de aplicar Regla 1: "), write(NewP), nl,
     NewP \= P.
 
 % Procesar todas las unidades (filas, columnas, bloques)
@@ -13,19 +13,19 @@ process_all_units(P, NewP) :-
 
 % Procesar todas las filas
 process_rows(P, NewP) :-
-    write("Procesando filas..."), nl,
+    %write("Procesando filas..."), nl,
     findall(RowIndices, row_indices(RowIndices), Rows),
     foldl(process_unit, Rows, P, NewP).
 
 % Procesar todas las columnas
 process_columns(P, NewP) :-
-    write("Procesando columnas..."), nl,
+    %write("Procesando columnas..."), nl,
     findall(ColIndices, column_indices(ColIndices), Cols),
     foldl(process_unit, Cols, P, NewP).
 
 % Procesar todos los bloques
 process_blocks(P, NewP) :-
-    write("Procesando bloques..."), nl,
+    %write("Procesando bloques..."), nl,
     findall(BlockIndices, block_indices(BlockIndices), Blocks),
     foldl(process_unit, Blocks, P, NewP).
 
@@ -55,11 +55,11 @@ block_indices(BlockIndices) :-
 
 % Procesar una unidad (fila, columna o bloque)
 process_unit(UnitIndices, P, NewP) :-
-    write("Procesando unidad: "), write(UnitIndices), nl,
+    %write("Procesando unidad: "), write(UnitIndices), nl,
     collect_numbers_in_unit(UnitIndices, P, Numbers),
-    write("Numeros en la unidad: "), write(Numbers), nl,
+    %write("Numeros en la unidad: "), write(Numbers), nl,
     find_unique_numbers(Numbers, UniqueNumbers),
-    write("Numeros unicos en la unidad: "), write(UniqueNumbers), nl,
+    %write("Numeros unicos en la unidad: "), write(UniqueNumbers), nl,
     apply_unique_changes(UniqueNumbers, UnitIndices, P, NewP).
 
 % Recolectar todos los números de las posibilidades en la unidad (excluyendo celdas fijadas)
@@ -83,38 +83,38 @@ count_member(Element, List, Count) :-
     length(Filtered, Count).
 
 % Aplicar cambios para los números únicos
-apply_unique_changes([], _, P, P) :-
-    write('No hay mas numeros unicos por procesar'), nl.
+apply_unique_changes([], _, P, P).
+    %write('No hay mas numeros unicos por procesar'), nl.
 apply_unique_changes([N|Ns], UnitIndices, P, NewP) :-
-    nl, write('=== Procesando numero unico: '), write(N), nl,
-    write('Estado actual de P: '), write(P), nl,
+    %nl, write('=== Procesando numero unico: '), write(N), nl,
+    %write('Estado actual de P: '), write(P), nl,
     (find_cell_with_number(N, UnitIndices, P, Cell)
     ->  (
-            write('Encontrado '), write(N), 
-            write(' en celda '), write(Cell), nl,
-            % write('Posibilidades originales en celda '), write(Cell), 
-            write(': '), nth0(Cell, P, Orig), write(Orig), nl,
+            % write('Encontrado '), write(N), 
+            % write(' en celda '), write(Cell), nl,
+            % % write('Posibilidades originales en celda '), write(Cell), 
+            % write(': '), nth0(Cell, P, Orig), write(Orig), nl,
             
             % Aplicar cambio en celda principal
             replace_possibility(Cell, [N], P, TempP),
             
-            write('Estado despues de fijar '), write(N), 
-            write(' en celda '), write(Cell), write(': '), 
-            write(TempP), nl,
+            % write('Estado despues de fijar '), write(N), 
+            % write(' en celda '), write(Cell), write(': '), 
+            % write(TempP), nl,
             
             % Procesar siguientes números
             apply_unique_changes(Ns, UnitIndices, TempP, NewP)
         )
     ;   (
-            write('Numero '), write(N), 
-            write(' no encontrado en la unidad'), nl,
+            % write('Numero '), write(N), 
+            % write(' no encontrado en la unidad'), nl,
             apply_unique_changes(Ns, UnitIndices, P, NewP)
         )
     ).
 
 % Encontrar la celda en la unidad que contiene el número N (solo en celdas no fijadas)
 find_cell_with_number(N, UnitIndices, P, Cell) :-
-    write('Buscando '), write(N), write(' en unidad...'), nl,
+    % write('Buscando '), write(N), write(' en unidad...'), nl,
     member(Cell, UnitIndices),
     nth0(Cell, P, Poss),
     is_list(Poss),
@@ -122,14 +122,14 @@ find_cell_with_number(N, UnitIndices, P, Cell) :-
     member(N, Poss).
 
 replace_possibility(Index, NewVal, Old, New) :-
-    nl, write('>>> Reemplazando posibilidades en celda '), write(Index), nl,
-    write('Valor nuevo: '), write(NewVal), nl,
+    % nl, write('>>> Reemplazando posibilidades en celda '), write(Index), nl,
+    % write('Valor nuevo: '), write(NewVal), nl,
     replace_at_index(Index, NewVal, Old, TempP),
     (NewVal = [N] ->
         % write('Eliminando '), write(N), 
         % write(' de unidades relacionadas...'), nl,
         get_related_indices(Index, RelatedIndices),
-        write('Indices relacionados: '), write(RelatedIndices), nl,
+        % write('Indices relacionados: '), write(RelatedIndices), nl,
         foldl(remove_number_from_cell(N), RelatedIndices, TempP, New)
         % write('Estado final despues de eliminaciones: '), write(New), nl
     ;   New = TempP

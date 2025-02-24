@@ -151,6 +151,7 @@ main(S) :-
     resolver(S, P, FinalS),
     (member('.', FinalS) ->
         write("Sudoku resuelto parcialmente:"), nl
+
     ;
         write("Sudoku resuelto totalmente:"), nl
     ),
@@ -175,21 +176,19 @@ aplicar_reglas(S, P, NewS, NewP) :-
         NewP = TempP
     ;
         % Paso 2: Si no hubo cambios en S, aplicar Regla 1
-        (regla1(S, P, TempP1), P \= TempP1 ->
+        (regla1(P, TempP1), P \= TempP1 ->
             write('REGLA 1 APLICADA!'), nl,
-            NewS = S,
-            NewP = TempP1
+            NewP = TempP1,
+            mostrar_sudoku(NewP)
         ;
             % Paso 3: Si no hubo cambios en P, aplicar Regla 2
-            (regla2(S, P, TempP2), P \= TempP2 ->
+            (regla2(P, TempP2), P \= TempP2 ->
                 write('REGLA 2 APLICADA!'), nl,
-                NewS = S,
                 NewP = TempP2
             ;
                 % Paso 4: Si no hubo cambios, aplicar Regla 3
-                (regla3(S, P, TempP3), P \= TempP3 ->
+                (regla3(P, TempP3), P \= TempP3 ->
                     write('REGLA 3 APLICADA!'), nl,
-                    NewS = S,
                     NewP = TempP3
                 ;
                     % Ninguna regla aplicó cambios
@@ -199,4 +198,14 @@ aplicar_reglas(S, P, NewS, NewP) :-
                 )
             )
         )
+    ).
+
+test_regla2() :-
+    p_regla2(P),
+    (regla2(P, TempP1), P \= TempP1 ->
+            write('REGLA 2 APLICADA!'), nl,
+            NewP = TempP1,
+            mostrar_sudoku(NewP)
+        ;
+            write('No fufa ;_;')
     ).
