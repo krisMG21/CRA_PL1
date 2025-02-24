@@ -2,6 +2,7 @@ import streamlit as st
 import ast
 from pyswip import Prolog
 import json
+import time
 
 # -------------------------------
 # Función para convertir lista de sudoku a formato Prolog
@@ -33,7 +34,6 @@ class PrologConnector:
         sudoku_str = sudoku_to_prolog(sudoku)
         query = f"posibles({sudoku_str}, Posibles)."
         resultados = list(self.prolog.query(query))
-        print(resultados)
         if resultados:
             # Se espera que Posibles sea una lista de 81 elementos (cada uno: '.' o lista de números)
             return resultados[0]['Posibles']
@@ -104,67 +104,178 @@ def parse_sudoku_file(file_content):
         return None
 
 # -------------------------------
-# Función para renderizar el sudoku (con bordes destacados y celdas interactivas)
-def render_sudoku(sudoku, posibilidades, connector):
+# Callbacks para manejar cambios sin reruns
+def on_cell_change(idx):
+    # Esta función se llama cuando cambia el valor de una celda
+    valor_ingresado = st.session_state[f"cell_{idx}"]
+    
+    if valor_ingresado == "":
+        return
+    
+    sudoku = st.session_state.sudoku
+    connector = st.session_state.connector
+    
+    try:
+        valor_int = int(valor_ingresado)
+        if valor_int < 1 or valor_int > 9:
+            st.session_state.mensaje = {"tipo": "error", "texto": f"Celda {idx+1}: Debe ingresar un número entre 1 y 9"}
+            return
+    except ValueError:
+        st.session_state.mensaje = {"tipo": "error", "texto": f"Celda {idx+1}: Debe ingresar un número entre 1 y 9"}
+        return
+    
+    # Validamos el movimiento
+    valido, mensaje = connector.validar_movimiento(sudoku, idx, valor_ingresado)
+    
+    if valido:
+        # Actualizamos el sudoku
+        sudoku[idx] = int(valor_ingresado)
+        st.session_state.sudoku = sudoku
+        # Recalculamos posibilidades
+        posibilidades = connector.calcular_posibilidades(sudoku)
+        st.session_state.posibilidades = posibilidades
+        # Guardamos el mensaje de éxito
+        st.session_state.mensaje = {"tipo": "exito", "texto": f"Celda {idx+1}: {mensaje}"}
+        # Marcamos que la UI necesita actualizarse
+        st.session_state.need_refresh = True
+        # Generamos una nueva clave única para forzar la recarga de widgets
+        st.session_state.board_key = int(time.time() * 1000)
+    else:
+        # Si no es válido, guardamos el mensaje de error
+        st.session_state.mensaje = {"tipo": "error", "texto": f"Celda {idx+1}: {mensaje}"}
+        # Limpiamos el valor inválido
+        st.session_state[f"cell_{idx}"] = ""
+
+# Callbacks para los botones de reglas
+def on_regla(regla):
+    # Esta función se llama cuando se pulsa un botón de regla
+    sudoku = st.session_state.sudoku
+    posibilidades = st.session_state.posibilidades
+    connector = st.session_state.connector
+    
+    if regla == "resolver":
+        nuevo_sudoku, nuevas_poss = connector.aplicar_reglas(sudoku, posibilidades)
+    else:
+        nuevo_sudoku = connector.aplicar_regla(regla, sudoku, posibilidades)
+        nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku)
+    
+    st.session_state.sudoku = nuevo_sudoku
+    st.session_state.posibilidades = nuevas_poss
+    st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {regla} al sudoku"}
+    st.session_state.need_refresh = True
+    st.session_state.board_key = int(time.time() * 1000)
+
+# -------------------------------
+def format_posibilidades(posibles):
+    if posibles == '.':
+        return ""
+    return "[" + ",".join(map(str, posibles)) + "]"
+
+# -------------------------------
+def render_sudoku():
+    st.markdown(
+        """
+        <style>
+        /* Centrar el texto en todos los inputs */
+        input {
+            text-align: center;
+        }
+        /* Para inputs deshabilitados (celdas ya validadas) */
+        input:disabled {
+            font-weight: bold;
+            color: white;
+            background-color: #333;
+            text-align: center;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
     st.markdown("### Sudoku")
-    print(posibilidades)
-    # Usamos un contenedor para la grilla
+    
+    # Recuperamos los datos del estado
+    sudoku = st.session_state.sudoku
+    posibilidades = st.session_state.posibilidades
+    
+    # Muestra mensaje si existe
+    if 'mensaje' in st.session_state and st.session_state.mensaje:
+        if st.session_state.mensaje["tipo"] == "exito":
+            st.success(st.session_state.mensaje["texto"])
+        elif st.session_state.mensaje["tipo"] == "error":
+            st.warning(st.session_state.mensaje["texto"])
+        elif st.session_state.mensaje["tipo"] == "info":
+            st.info(st.session_state.mensaje["texto"])
+        
+        # Limpiamos el mensaje después de mostrarlo
+        st.session_state.mensaje = None
+    
+    # Función para mapear la columna j a la columna real en st.columns
+    def map_col(j):
+        if j < 3:
+            return j
+        elif j < 6:
+            return j + 1  # Salta una columna fina
+        else:
+            return j + 2  # Salta dos columnas finas
+    
+    # Se recorre la grilla de 9x9 celdas
     for i in range(9):
-        cols = st.columns(9)
+        if i in [3, 6]:
+            st.write("")  # Separador entre bloques
+        cols = st.columns([1,1,1, 0.2, 1,1,1, 0.2, 1,1,1], gap="small")
         for j in range(9):
             idx = i * 9 + j
-            # Definimos estilos para los bordes (más gruesos para subcuadrantes)
-            top_border    = "2px solid black" if i % 3 == 0 else "1px solid grey"
-            bottom_border = "2px solid black" if i == 8 or (i+1) % 3 == 0 else "1px solid grey"
-            left_border   = "2px solid black" if j % 3 == 0 else "1px solid grey"
-            right_border  = "2px solid black" if j == 8 or (j+1) % 3 == 0 else "1px solid grey"
-            cell_style = f"""
-                padding: 10px;
-                text-align: center;
-                font-size: 24px;
-                border-top: {top_border};
-                border-bottom: {bottom_border};
-                border-left: {left_border};
-                border-right: {right_border};
-                min-width: 60px;
-                min-height: 60px;
-            """
-            # Si la celda está llena, mostramos el número; si no, mostramos un input y las posibilidades
-            if sudoku[idx] != '.':
-                cols[j].markdown(f"<div style='{cell_style}'>{sudoku[idx]}</div>", unsafe_allow_html=True)
-            else:
-                # Mostramos el input y debajo las posibilidades (en letra pequeña y color claro)
-                # Usamos text_input; su valor se captura en session_state con clave única "cell_{idx}"
-                # Se incluye un placeholder que muestra las opciones.
-                key_name = f"cell_{idx}"
-                # Se crea un contenedor para la celda con un div y luego se inserta el text_input (debido a las limitaciones de Streamlit, se
-                # usará el input sin estilos extra; el div lo usamos para marcar la celda)
-                print(cols[j])
-                valor_ingresado = cols[j].text_input("", value="", key=key_name, placeholder="|".join(map(str, posibilidades[idx])))
-                # Si se ingresa un valor (y es distinto de la cadena vacía), se valida mediante Prolog
-                if valor_ingresado != "":
-                    valido, mensaje = connector.validar_movimiento(sudoku, idx, valor_ingresado)
-                    if valido:
-                        sudoku[idx] = int(valor_ingresado)
-                        st.success(f"Celda {idx+1}: {mensaje}")
-                        # Se puede recalcular las posibilidades después de cada movimiento
-                        nuevas_poss = connector.calcular_posibilidades(sudoku)
-                        posibilidades[idx] = nuevas_poss[idx]
-                        # Se limpia el input
-                        st.session_state[key_name] = ""
-                    else:
-                        st.warning(f"Celda {idx+1}: {mensaje}")
-                # Finalmente, se muestra la caja con las posibilidades en formato pequeño
-                cols[j].markdown(f"<div style='font-size: 10px; color: #777;'>{posibilidades[idx]}</div>", unsafe_allow_html=True)
+            col_index = map_col(j)
+            esta_vacia = (sudoku[idx] == '.')
+            
+            with cols[col_index]:
+                if esta_vacia:
+                    # Construimos el placeholder con las posibilidades actuales
+                    placeholder = format_posibilidades(posibilidades[idx])
+                    
+                    # Para las celdas vacías, mostramos un input con las posibilidades como placeholder
+                    st.text_input(
+                        label=f"Input for cell {idx+1}",
+                        value="",
+                        key=f"cell_{idx}",
+                        placeholder=placeholder,
+                        on_change=on_cell_change,
+                        args=(idx,),
+                        label_visibility="collapsed"
+                    )
+                else:
+                    # Para celdas ya completadas, mostramos un input deshabilitado
+                    st.text_input(
+                        label=f"Input for cell {idx+1}",
+                        value=str(sudoku[idx]),
+                        key=f"cell_{idx}",
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
 
 # -------------------------------
 # Configuración y flujo principal de Streamlit
 def main():
     st.set_page_config(page_title="Sudoku Solver", layout="wide")
     
+    # Inicializamos variables del estado si no existen
+    if 'board_key' not in st.session_state:
+        st.session_state.board_key = 0
+    
+    if 'need_refresh' not in st.session_state:
+        st.session_state.need_refresh = False
+    
+    if 'mensaje' not in st.session_state:
+        st.session_state.mensaje = None
+    
+    # Inicializamos la conexión con Prolog (se hace una única vez)
+    if 'connector' not in st.session_state:
+        st.session_state.connector = PrologConnector()
+    
     # Texto explicativo en la parte superior
     st.markdown("""
-    # Resolvedor de Sudokus 9x9
+    # SudoQ
     Esta aplicación resuelve sudokus de 9x9 utilizando un motor de reglas implementado en Prolog.
     
     El sudoku se representa como una lista de 81 elementos. Las celdas vacías se indican con un punto ('.'). 
@@ -173,61 +284,56 @@ def main():
     botones para aplicar reglas parciales (regla0, regla1, regla2 y regla3) y un botón para resolver el sudoku 
     automáticamente mediante la función aplicar_reglas.
     """)
-
-    # Inicializamos la conexión con Prolog (se hace una única vez)
-    if 'connector' not in st.session_state:
-        st.session_state.connector = PrologConnector()
-
-    connector = st.session_state.connector
-
+    
     # Panel lateral para importar sudoku
     st.sidebar.header("Importar Sudoku")
-    uploaded_file = st.sidebar.file_uploader("Sube un archivo .txt con el sudoku", type=["txt"])
+    uploaded_file = st.sidebar.file_uploader("Sube un archivo .txt con el sudoku", 
+                                             type=["txt"], 
+                                             key=f"uploader_{st.session_state.board_key}")
+    
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
         sudoku = parse_sudoku_file(file_bytes)
         if sudoku is not None:
             st.session_state.sudoku = sudoku
             # Calculamos las posibilidades iniciales llamando a Prolog
-            st.session_state.posibilidades = connector.calcular_posibilidades(sudoku)
+            st.session_state.posibilidades = st.session_state.connector.calcular_posibilidades(sudoku)
             st.sidebar.success("Sudoku cargado correctamente.")
-
+    
     # Si ya se cargó un sudoku, lo mostramos en el centro
     if 'sudoku' in st.session_state and 'posibilidades' in st.session_state:
-        sudoku = st.session_state.sudoku
-        posibilidades = st.session_state.posibilidades
-        
         # Renderizamos el sudoku (centrado)
-        render_sudoku(sudoku, posibilidades, connector)
+        render_sudoku()
         
         st.markdown("---")
         st.markdown("### Acciones")
         col1, col2, col3, col4, col5 = st.columns(5)
-        if col1.button("Aplicar regla 0"):
-            nuevo_sudoku = connector.aplicar_regla("regla0", sudoku, posibilidades)
-            st.session_state.sudoku = nuevo_sudoku
-            st.session_state.posibilidades = connector.calcular_posibilidades(nuevo_sudoku)
-            st.experimental_rerun()
-        if col2.button("Aplicar regla 1"):
-            nuevo_sudoku = connector.aplicar_regla("regla1", sudoku, posibilidades)
-            st.session_state.sudoku = nuevo_sudoku
-            st.session_state.posibilidades = connector.calcular_posibilidades(nuevo_sudoku)
-            st.experimental_rerun()
-        if col3.button("Aplicar regla 2"):
-            nuevo_sudoku = connector.aplicar_regla("regla2", sudoku, posibilidades)
-            st.session_state.sudoku = nuevo_sudoku
-            st.session_state.posibilidades = connector.calcular_posibilidades(nuevo_sudoku)
-            st.experimental_rerun()
-        if col4.button("Aplicar regla 3"):
-            nuevo_sudoku = connector.aplicar_regla("regla3", sudoku, posibilidades)
-            st.session_state.sudoku = nuevo_sudoku
-            st.session_state.posibilidades = connector.calcular_posibilidades(nuevo_sudoku)
-            st.experimental_rerun()
-        if col5.button("Resolver Sudoku"):
-            nuevo_sudoku, nuevas_poss = connector.aplicar_reglas(sudoku, posibilidades)
-            st.session_state.sudoku = nuevo_sudoku
-            st.session_state.posibilidades = nuevas_poss
-            st.experimental_rerun()
+        
+        # Usamos on_click con callbacks para evitar reruns
+        col1.button("Aplicar regla 0", 
+                   key=f"regla0_{st.session_state.board_key}", 
+                   on_click=on_regla, 
+                   args=("regla0",))
+        
+        col2.button("Aplicar regla 1", 
+                   key=f"regla1_{st.session_state.board_key}", 
+                   on_click=on_regla, 
+                   args=("regla1",))
+        
+        col3.button("Aplicar regla 2", 
+                   key=f"regla2_{st.session_state.board_key}", 
+                   on_click=on_regla, 
+                   args=("regla2",))
+        
+        col4.button("Aplicar regla 3", 
+                   key=f"regla3_{st.session_state.board_key}", 
+                   on_click=on_regla, 
+                   args=("regla3",))
+        
+        col5.button("Resolver Sudoku", 
+                   key=f"resolver_{st.session_state.board_key}", 
+                   on_click=on_regla, 
+                   args=("resolver",))
     else:
         st.info("Por favor, sube un sudoku en el panel lateral para comenzar.")
 
