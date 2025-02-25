@@ -1,8 +1,24 @@
 % REGLA2: Elimina de P (posibilidades) los candidatos de pares desnudos en filas, columnas y cuadrantes.
 regla2(P, NewP) :-
-    parejas_filas(P, P1),
-    parejas_columnas(P1, P2),
-    parejas_cuadrantes(P2, NewP).
+    (parejas_filas(P, P1), P \= P1 ->
+        write("regla2: Cambios aplicados en una fila"), nl,
+        NewP = P1
+    ;
+        parejas_columnas(P, P2), P \= P2 ->
+            write("regla2: Cambios aplicados en una columna"), nl,
+            NewP = P2
+    ;
+        parejas_cuadrantes(P, P3), P \= P3 ->
+            write("regla2: Cambios aplicados en un cuadrante"), nl,
+            NewP = P3
+    ;
+        write("regla2: No ha aplicado cambios"), nl,
+        NewP = P
+    ).
+
+    % parejas_filas(P, P1),
+    % parejas_columnas(P1, P2),
+    % parejas_cuadrantes(P2, NewP).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 1. Eliminación sobre filas
@@ -32,15 +48,32 @@ parejas_filas(P, NewP) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Transpone una matriz (lista de listas).
-transponer([], []).
-transponer([[]|_], []).
-transponer(Matrix, [Row|Rows]) :-
-    extraer_primera_col(Matrix, Row, RestMatrix),
-    transponer(RestMatrix, Rows).
+transponer(Plano, Transpuesto) :-
+    dividir_en_filas(Plano, Matriz),
+    transponer_matriz(Matriz, MatrizT),
+    aplanar_matriz(MatrizT, Transpuesto).
 
-extraer_primera_col([], [], []).
-extraer_primera_col([[H|T]|Rows], [H|Hs], [T|Ts]) :-
-    extraer_primera_col(Rows, Hs, Ts).
+dividir_en_filas([], []).
+dividir_en_filas(Lista, [Fila|Resto]) :-
+    length(Fila, 9),
+    append(Fila, RestoDeLista, Lista),
+    dividir_en_filas(RestoDeLista, Resto).
+
+transponer_matriz([], []).
+transponer_matriz([[]|_], []).
+transponer_matriz(Matriz, [Col|Cols]) :-
+    maplist(descomponer_fila, Matriz, Col, RestMatrix),
+    transponer_matriz(RestMatrix, Cols).
+
+descomponer_fila([X|Xs], X, Xs).
+descomponer_fila('.', '.', []).
+
+aplanar_matriz([], []).
+aplanar_matriz([Fila|Filas], Plano) :-
+    append(Fila, RestoPlano, Plano),
+    aplanar_matriz(Filas, RestoPlano).
+
+
 
 % Aplica la eliminación en columnas: se transpone,
 % se procesa como filas y se transpone de vuelta.
@@ -98,19 +131,33 @@ procesar_lista([Group|Groups], [NewGroup|NewGroups]) :-
     (Pair = [] -> NewGroup = Group ; eliminar_instancias(Group, Pair, NewGroup)),
     procesar_lista(Groups, NewGroups).
 
-encontrar_parejas([X,Y|Rest], Pair) :-
-    (X = [A,B], Y = [A,B] -> Pair = [A,B] ; encontrar_parejas([Y|Rest], Pair)).
-encontrar_parejas([_], []).
-encontrar_parejas([], []).
+% Versión corregida de encontrar_parejas/2
+encontrar_parejas(Group, Pair) :-
+    find_possible_pairs(Group, Pairs),
+    select_valid_pair(Pairs, Group, Pair).
 
+find_possible_pairs(Group, Pairs) :-
+    findall(
+        [A,B], 
+        (member(X, Group), 
+         is_list(X), 
+         length(X, 2), 
+         X = [A,B]), 
+        Pairs
+    ).
+
+select_valid_pair(Pairs, Group, Pair) :-
+    member(Pair, Pairs),
+    count_occurrences(Pair, Group, 2).
+
+count_occurrences(Pair, Group, Count) :-
+    include(=(Pair), Group, Matching),
+    length(Matching, Count).
+
+% Versión mejorada de eliminar_instancias/3
 eliminar_instancias([], _, []).
-eliminar_instancias([[A,B]|Rest], [A,B], [[A,B]|NewRest]) :-
-    eliminar_instancias(Rest, [A,B], NewRest).
 eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-
-    X \= Pair,
-    eliminar_de_lista(X, Pair, NewX),
+    (is_list(X) 
+     -> subtract(X, Pair, NewX) 
+     ;  NewX = X),
     eliminar_instancias(Rest, Pair, NewRest).
-
-eliminar_de_lista([], _, []).
-eliminar_de_lista([X|Xs], Pair, NewXs) :-
-    (member(X, Pair) -> eliminar_de_lista(Xs, Pair, NewXs) ; NewXs = [X|Rest], eliminar_de_lista(Xs, Pair, Rest)).
