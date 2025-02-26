@@ -40,7 +40,7 @@ aplanar_filas([Row|Rows], Flat) :-
 % Procesa cada fila aplicando la eliminación de pares desnudos.
 parejas_filas(P, NewP) :-
     split_filas(P, Rows),
-    procesar_lista(Rows, NewRows),
+    procesar_listas(Rows, NewRows),
     aplanar_filas(NewRows, NewP).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -74,13 +74,12 @@ aplanar_matriz([Fila|Filas], Plano) :-
     aplanar_matriz(Filas, RestoPlano).
 
 
-
 % Aplica la eliminación en columnas: se transpone,
 % se procesa como filas y se transpone de vuelta.
 parejas_columnas(P, NewP) :-
     split_filas(P, Rows),
     transponer(Rows, Columns),
-    procesar_lista(Columns, NewColumns),
+    procesar_listas(Columns, NewColumns),
     transponer(NewColumns, NewRows),
     aplanar_filas(NewRows, NewP).
 
@@ -103,7 +102,7 @@ split_3_filas([A,B,C|R1], [D,E,F|R2], [G,H,I|R3], [A,B,C,D,E,F,G,H,I|Q1], Q2, Q3
 parejas_cuadrantes(P, NewP) :-
     split_filas(P, Rows),
     split_cuadrantes(Rows, Quads),
-    procesar_lista(Quads, NewQuads),
+    procesar_listas(Quads, NewQuads),
     aplanar_cuadrantes(NewQuads, NewRows),
     aplanar_filas(NewRows, NewP).
 
@@ -125,18 +124,19 @@ split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-procesar_lista([], []).
-procesar_lista([Group|Groups], [NewGroup|NewGroups]) :-
-    encontrar_parejas(Group, Pair),
-    (Pair = [] -> NewGroup = Group ; eliminar_instancias(Group, Pair, NewGroup)),
-    procesar_lista(Groups, NewGroups).
+procesar_listas([], []).                     %FUNCIONA
+procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
+    ( Group \= '.' ->
+        encontrar_parejas(Group, Pair),
+        eliminar_instancias(Group, Pair, NewGroup)
+    ),
+    procesar_listas(Groups, NewGroups).
 
-% Versión corregida de encontrar_parejas/2
-encontrar_parejas(Group, Pair) :-
+encontrar_parejas(Group, Pair) :-           %FUNCIONA
     find_possible_pairs(Group, Pairs),
     select_valid_pair(Pairs, Group, Pair).
 
-find_possible_pairs(Group, Pairs) :-
+find_possible_pairs(Group, Pairs) :-        %FUNCIONA
     findall(
         [A,B], 
         (member(X, Group), 
@@ -146,18 +146,18 @@ find_possible_pairs(Group, Pairs) :-
         Pairs
     ).
 
-select_valid_pair(Pairs, Group, Pair) :-
+select_valid_pair(Pairs, Group, Pair) :-    %FUNCIONA
     member(Pair, Pairs),
     count_occurrences(Pair, Group, 2).
 
-count_occurrences(Pair, Group, Count) :-
+count_occurrences(Pair, Group, Count) :-    %FUNCIONA
     include(=(Pair), Group, Matching),
     length(Matching, Count).
 
 % Versión mejorada de eliminar_instancias/3
 eliminar_instancias([], _, []).
-eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-
-    (is_list(X) 
+eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-  %FUNCIONA
+    (X \= Pair, is_list(X) 
      -> subtract(X, Pair, NewX) 
      ;  NewX = X),
     eliminar_instancias(Rest, Pair, NewRest).
