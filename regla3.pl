@@ -78,6 +78,6 @@ procesar_listas_3([], []).                    %FUNCIONA
 procesar_listas_3([['.','.','.','.','.','.','.','.','.']|Groups],[_|NewGroups]) :-
     procesar_listas_3(Groups,NewGroups).
 procesar_listas_3([Group|_], [NewGroup|_]) :-
-   encontrar_tripletas(Group,Triplet),
-   eliminar_instancias_3(Group,Triplet,NewGroup).
+    encontrar_tripletas(Group,Triplet),
+    eliminar_instancias_3(Group,Triplet,NewGroup).
     

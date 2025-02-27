@@ -124,25 +124,23 @@ split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-procesar_listas([], []).
-procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
-    (encontrar_parejas(Group, Pair) ->
-        eliminar_instancias(Group, Pair, NewGroup)
-    ;
-        NewGroup = Group),
+procesar_listas([], []).                    %FUNCIONA
+procesar_listas([['.','.','.','.','.','.','.','.','.']|Groups],[_|NewGroups]) :-
     procesar_listas(Groups, NewGroups).
+procesar_listas([Group|_], [NewGroup|_]) :-
+   encontrar_parejas(Group, Pair),
+   eliminar_instancias(Group, Pair, NewGroup).
 
 encontrar_parejas(Group, Pair) :-           %FUNCIONA
     find_possible_pairs(Group, Pairs),
     select_valid_pair(Pairs, Group, Pair).
 
-find_possible_pairs(Group, Pairs) :-        %FUNCIONA
+find_possible_pairs(Group, Pairs) :-
     findall(
-        [A,B], 
-        (member(X, Group), 
-         is_list(X), 
-         length(X, 2), 
-         X = [A,B]), 
+        X,
+        (member(X, Group),
+         is_list(X),
+         length(X, 2)),
         Pairs
     ).
 
@@ -159,5 +157,5 @@ eliminar_instancias([], _, []).
 eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-  %FUNCIONA
     (X \= Pair, is_list(X) 
      -> subtract(X, Pair, NewX) 
-     ;  NewX = X),
+    ;  NewX = X),
     eliminar_instancias(Rest, Pair, NewRest).
