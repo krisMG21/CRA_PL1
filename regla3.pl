@@ -23,7 +23,7 @@ regla3(P, NewP) :-
 % Procesa cada fila aplicando la eliminación de pares desnudos.
 tripletas_filas(P, NewP) :-
     split_filas(P, Rows),
-    procesar_listas(Rows, NewRows),
+    procesar_listas_3(Rows, NewRows),
     aplanar_filas(NewRows, NewP).
 
 % Aplica la eliminación en columnas: se transpone,
@@ -31,7 +31,7 @@ tripletas_filas(P, NewP) :-
 tripletas_columnas(P, NewP) :-
     split_filas(P, Rows),
     transponer(Rows, Columns),
-    procesar_listas(Columns, NewColumns),
+    procesar_listas_3(Columns, NewColumns),
     transponer(NewColumns, NewRows),
     aplanar_filas(NewRows, NewP).
 
@@ -39,7 +39,7 @@ tripletas_columnas(P, NewP) :-
 tripletas_cuadrantes(P, NewP) :-
     split_filas(P, Rows),
     split_cuadrantes(Rows, Quads),
-    procesar_listas(Quads, NewQuads),
+    procesar_listas_3(Quads, NewQuads),
     aplanar_cuadrantes(NewQuads, NewRows),
     aplanar_filas(NewRows, NewP).
 
@@ -60,24 +60,24 @@ find_possible_triplets(Group, Triplets) :-        %FUNCIONA
 
 select_valid_triplet(Triplets, Group, Triplet) :-    %FUNCIONA
     member(Triplet, Triplets),
-    count_occurrences(Triplet, Group, 3).
+    count_occurrences_3(Triplet, Group, 3).
 
-count_occurrences(Triplet, Group, Count) :-    %FUNCIONA
+count_occurrences_3(Triplet, Group, Count) :-    %FUNCIONA
     include(=(Triplet), Group, Matching),
     length(Matching, Count).
 
 % Versión mejorada de eliminar_instancias/3
-eliminar_instancias([], _, []).
-eliminar_instancias([X|Rest], Triplet, [NewX|NewRest]) :-  %FUNCIONA
+eliminar_instancias_3([], _, []).
+eliminar_instancias_3([X|Rest], Triplet, [NewX|NewRest]) :-  %FUNCIONA
     (X \= Triplet, is_list(X) 
      -> subtract(X, Triplet, NewX) 
      ;  NewX = X),
-    eliminar_instancias(Rest, Triplet, NewRest).
+    eliminar_instancias_3(Rest, Triplet, NewRest).
 
-procesar_listas([], []).                     %FUNCIONA
-procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
-    ( Group \= '.' ->
-        encontrar_tripletas(Group, Triplet),
-        eliminar_instancias(Group, Triplet, NewGroup)
-    ),
-    procesar_listas(Groups, NewGroups).
+procesar_listas_3([], []).                    %FUNCIONA
+procesar_listas_3([['.','.','.','.','.','.','.','.','.']|Groups],[_|NewGroups]) :-
+    procesar_listas_3(Groups,NewGroups).
+procesar_listas_3([Group|_], [NewGroup|_]) :-
+   encontrar_tripletas(Group,Triplet),
+   eliminar_instancias_3(Group,Triplet,NewGroup).
+    
