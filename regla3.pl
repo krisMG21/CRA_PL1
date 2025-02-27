@@ -134,21 +134,21 @@ procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
 
 encontrar_tripletas(Group, Triplet) :-           %FUNCIONA
     find_possible_triplets(Group, Triplets),
-    select_valid_triplet(Pairs, Group, Triplet).
+    select_valid_triplet(Triplets, Group, Triplet).
 
 find_possible_triplets(Group, Triplets) :-        %FUNCIONA
     findall(
-        [A,B], 
+        [A,B,C], 
         (member(X, Group), 
          is_list(X), 
          length(X, 3), 
-         X = [A,B]), 
-        Pairs
+         X = [A,B,C]), 
+        Triplets
     ).
 
-select_valid_pair(Triplets, Group, Triplet) :-    %FUNCIONA
+select_valid_triplet(Triplets, Group, Triplet) :-    %FUNCIONA
     member(Triplet, Triplets),
-    count_occurrences(Triplet, Group, 2).
+    count_occurrences(Triplet, Group, 3).
 
 count_occurrences(Triplet, Group, Count) :-    %FUNCIONA
     include(=(Triplet), Group, Matching),
