@@ -209,3 +209,13 @@ test_regla2() :-
         ;
             write('No fufa ;_;')
     ).
+
+test_regla3() :-
+    p_regla3(P),
+    (regla3(P, TempP), P \= TempP ->
+            write('REGLA 3 APLICADA!'), nl,
+            NewP = TempP,
+            mostrar_sudoku(NewP)
+        ;
+            write('No fufa ;_;')
+    ).
