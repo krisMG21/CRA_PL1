@@ -25,20 +25,20 @@ regla2(P, NewP) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Separa la lista plana de 81 celdas en filas (cada fila con 9 celdas).
-split_filas([], []).
+split_filas([], []).            % FUNCIONA
 split_filas(P, [Row|Rows]) :-
     length(Row, 9),
     append(Row, Rest, P),
     split_filas(Rest, Rows).
 
 % Vuelve a aplanar la lista de filas en una lista simple.
-aplanar_filas([], []).
+aplanar_filas([], []).          % FUNCIONA
 aplanar_filas([Row|Rows], Flat) :-
     aplanar_filas(Rows, FlatRest),
     append(Row, FlatRest, Flat).
 
 % Procesa cada fila aplicando la eliminación de pares desnudos.
-parejas_filas(P, NewP) :-
+parejas_filas(P, NewP) :-       
     split_filas(P, Rows),
     procesar_listas(Rows, NewRows),
     aplanar_filas(NewRows, NewP).
@@ -124,12 +124,12 @@ split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-procesar_listas([], []).                     %FUNCIONA
+procesar_listas([], []).
 procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
-    ( Group \= '.' ->
-        encontrar_parejas(Group, Pair),
+    (encontrar_parejas(Group, Pair) ->
         eliminar_instancias(Group, Pair, NewGroup)
-    ),
+    ;
+        NewGroup = Group),
     procesar_listas(Groups, NewGroups).
 
 encontrar_parejas(Group, Pair) :-           %FUNCIONA
