@@ -181,6 +181,7 @@ aplicar_reglas(S, P, NewS, NewP) :-
             NewS = S,
             NewP = TempP1
         ;
+            mostrar_sudoku(P),
             % Paso 3: Si no hubo cambios en P, aplicar Regla 2
             (regla2(P, TempP2), P \= TempP2 ->
                 write('REGLA 2 APLICADA!'), nl,
