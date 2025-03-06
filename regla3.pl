@@ -75,8 +75,9 @@ eliminar_instancias_3([X|Rest], Triplet, [NewX|NewRest]) :-  %FUNCIONA
     eliminar_instancias_3(Rest, Triplet, NewRest).
 
 procesar_listas_3([], []).                    %FUNCIONA
-procesar_listas_3([['.','.','.','.','.','.','.','.','.']|Groups],[_|NewGroups]) :-
-    procesar_listas_3(Groups,NewGroups).
+procesar_listas_3([['.','.','.','.','.','.','.','.','.']|Groups],[NewGroup|NewGroups]) :-
+    procesar_listas_3(Groups,NewGroups),
+    NewGroup = ['.','.','.','.','.','.','.','.','.'].
 procesar_listas_3([Group|_], [NewGroup|_]) :-
     encontrar_tripletas(Group,Triplet),
     eliminar_instancias_3(Group,Triplet,NewGroup).
