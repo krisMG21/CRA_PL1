@@ -124,12 +124,20 @@ split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-procesar_listas([], []).                    %FUNCIONA
-procesar_listas([['.','.','.','.','.','.','.','.','.']|Groups],[_|NewGroups]) :-
+procesar_listas([], []).
+procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
+    (Group = ['.','.','.','.','.','.','.','.','.'] ->
+        NewGroup = Group  % Mantener grupo sin cambios si está vacío
+    ;
+        encontrar_parejas(Group, Pair),
+        (Pair = [] ->
+            NewGroup = Group  % Mantener grupo sin cambios si no se encuentra pareja
+        ;
+            eliminar_instancias(Group, Pair, NewGroup)
+        )
+    ),
     procesar_listas(Groups, NewGroups).
-procesar_listas([Group|_], [NewGroup|_]) :-
-   encontrar_parejas(Group, Pair),
-   eliminar_instancias(Group, Pair, NewGroup).
+
 
 encontrar_parejas(Group, Pair) :-           %FUNCIONA
     find_possible_pairs(Group, Pairs),
