@@ -16,28 +16,21 @@ regla2(P, NewP) :-
         NewP = P
     ).
 
-    % parejas_filas(P, P1),
-    % parejas_columnas(P1, P2),
-    % parejas_cuadrantes(P2, NewP).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 1. Eliminación sobre filas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Separa la lista plana de 81 celdas en filas (cada fila con 9 celdas).
-split_filas([], []).            % FUNCIONA
-split_filas(P, [Row|Rows]) :-
+split_filas([], []).
+split_filas(P, [Row|Rows]) :-       % FUNCIONA
     length(Row, 9),
     append(Row, Rest, P),
     split_filas(Rest, Rows).
 
-% Vuelve a aplanar la lista de filas en una lista simple.
-aplanar_filas([], []).          % FUNCIONA
-aplanar_filas([Row|Rows], Flat) :-
+aplanar_filas([], []).
+aplanar_filas([Row|Rows], Flat) :-  % FUNCIONA
     aplanar_filas(Rows, FlatRest),
     append(Row, FlatRest, Flat).
 
-% Procesa cada fila aplicando la eliminación de pares desnudos.
 parejas_filas(P, NewP) :-       
     split_filas(P, Rows),
     procesar_listas(Rows, NewRows),
@@ -47,67 +40,57 @@ parejas_filas(P, NewP) :-
 %% 2. Eliminación sobre columnas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Transpone una matriz (lista de listas).
-transponer(Plano, Transpuesto) :-
-    dividir_en_filas(Plano, Matriz),
+transponer(Plano, Transpuesto) :-       % FUNCIONA
+    split_filas(Plano, Matriz),
     transponer_matriz(Matriz, MatrizT),
-    aplanar_matriz(MatrizT, Transpuesto).
+    aplanar_filas(MatrizT, Transpuesto).
 
-dividir_en_filas([], []).
-dividir_en_filas(Lista, [Fila|Resto]) :-
-    length(Fila, 9),
-    append(Fila, RestoDeLista, Lista),
-    dividir_en_filas(RestoDeLista, Resto).
-
-transponer_matriz([], []).
+transponer_matriz([], []).              % FUNCIONA
 transponer_matriz([[]|_], []).
 transponer_matriz(Matriz, [Col|Cols]) :-
     maplist(descomponer_fila, Matriz, Col, RestMatrix),
     transponer_matriz(RestMatrix, Cols).
 
-descomponer_fila([X|Xs], X, Xs).
+descomponer_fila([X|Xs], X, Xs).        % FUNCIONA
 descomponer_fila('.', '.', []).
 
-aplanar_matriz([], []).
-aplanar_matriz([Fila|Filas], Plano) :-
-    append(Fila, RestoPlano, Plano),
-    aplanar_matriz(Filas, RestoPlano).
-
-
-% Aplica la eliminación en columnas: se transpone,
-% se procesa como filas y se transpone de vuelta.
 parejas_columnas(P, NewP) :-
-    split_filas(P, Rows),
-    transponer(Rows, Columns),
-    procesar_listas(Columns, NewColumns),
-    transponer(NewColumns, NewRows),
-    aplanar_filas(NewRows, NewP).
+    transponer(P, TP),
+    split_filas(TP, Columns),
+    procesar_listas(Columns, NewColumns),   % BUG
+    aplanar_filas(NewColumns, NewTP),
+    transponer(NewTP, NewP).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. Eliminación sobre cuadrantes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Separa las filas en cuadrantes (cada cuadrante son 9 celdas).
 split_cuadrantes([], []).
-split_cuadrantes([R1,R2,R3|Rest], Quads) :-
+split_cuadrantes([R1,R2,R3|Rest], [Q1,Q2,Q3|QuadsRest]) :-   % FUNCIONA
     split_3_filas(R1, R2, R3, Q1, Q2, Q3),
-    append([Q1,Q2,Q3], QuadsRest, Quads),
     split_cuadrantes(Rest, QuadsRest).
 
-split_3_filas([], [], [], [], [], []).
-split_3_filas([A,B,C|R1], [D,E,F|R2], [G,H,I|R3], [A,B,C,D,E,F,G,H,I|Q1], Q2, Q3) :-
-    split_3_filas(R1, R2, R3, Q1, Q2, Q3).
+split_3_filas(R1, R2, R3, Q1, Q2, Q3) :-    % FUNCIONA
+    split_row(R1, R1_Q1, R1_Q2, R1_Q3),
+    split_row(R2, R2_Q1, R2_Q2, R2_Q3),
+    split_row(R3, R3_Q1, R3_Q2, R3_Q3),
+    append(R1_Q1, R2_Q1, Temp1),
+    append(Temp1, R3_Q1, Q1),
+    append(R1_Q2, R2_Q2, Temp2),
+    append(Temp2, R3_Q2, Q2),
+    append(R1_Q3, R2_Q3, Temp3),
+    append(Temp3, R3_Q3, Q3).
 
-% Aplica la eliminación en cuadrantes
-parejas_cuadrantes(P, NewP) :-
-    split_filas(P, Rows),
-    split_cuadrantes(Rows, Quads),
-    procesar_listas(Quads, NewQuads),
-    aplanar_cuadrantes(NewQuads, NewRows),
-    aplanar_filas(NewRows, NewP).
+split_row(Row, Q1, Q2, Q3) :-   % FUNCIONA
+    length(Q1, 3),
+    length(Q2, 3),
+    length(Q3, 3),
+    append(Q1, Q2, Temp),
+    append(Temp, Q3, Row).
 
+% The rest of the code (aplanar_cuadrantes, split_cuad_to_filas, etc.) remains unchanged.
 aplanar_cuadrantes([], []).
-aplanar_cuadrantes([Q1,Q2,Q3|Rest], [R1,R2,R3|Rows]) :-
+aplanar_cuadrantes([Q1,Q2,Q3|Rest], [R1,R2,R3|Rows]) :- % FUNCIONA
     split_cuad_to_filas(Q1, R1a, R2a, R3a),
     split_cuad_to_filas(Q2, R1b, R2b, R3b),
     split_cuad_to_filas(Q3, R1c, R2c, R3c),
@@ -116,54 +99,132 @@ aplanar_cuadrantes([Q1,Q2,Q3|Rest], [R1,R2,R3|Rows]) :-
     append(R3a, R3b, R3ab), append(R3ab, R3c, R3),
     aplanar_cuadrantes(Rest, Rows).
 
-split_cuad_to_filas([], [], [], []).
+split_cuad_to_filas([], [], [], []).    % FUNCIONA
 split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]) :-
     split_cuad_to_filas(Rest, R1, R2, R3).
+
+parejas_cuadrantes(P, NewP) :-
+    split_filas(P, Rows),
+    split_cuadrantes(Rows, Quads),
+    procesar_listas(Quads, NewQuads),   % BUG
+    aplanar_cuadrantes(NewQuads, NewRows),
+    aplanar_filas(NewRows, NewP).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% procesar_listas([], []).
+% procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
+%     (Group = ['.','.','.','.','.','.','.','.','.'] ->
+%         NewGroup = Group
+%     ;
+%         encontrar_parejas(Group, Pair),
+%         (Pair = [] ->
+%             NewGroup = Group
+%         ;
+%             eliminar_instancias(Group, Pair, NewGroup)
+%         )
+%     ),
+%     procesar_listas(Groups, NewGroups).
+
+% encontrar_parejas(Group, Pair) :-       % FUNCIONA
+%     find_possible_pairs(Group, Pairs),
+%     maplist(sort, Pairs, SortedPairs),
+%     select_valid_pair(SortedPairs, Group, SortedPair),
+%     Pair = SortedPair.
+
+% find_possible_pairs(Group, Pairs) :-    % FUNCIONA
+%     findall(
+%         X,
+%         (member(X, Group),
+%          is_list(X),
+%          length(X, 2)),
+%         Pairs
+%     ).
+
+% select_valid_pair(Pairs, Group, Pair) :-    % FUNCIONA
+%     member(SP, Pairs),
+%     count_occurrences(SP, Group, 2),
+%     Pair = SP.
+
+count_occurrences(SortedPair, Group, Count) :-
+    count_occurrences_helper(Group, SortedPair, 0, Count).
+
+count_occurrences_helper([], _, Count, Count).
+count_occurrences_helper([X|Rest], SortedPair, Acc, Count) :-
+    (is_list(X), length(X, 2), sort(X, SX), SX == SortedPair ->
+        NewAcc is Acc + 1
+    ;
+        NewAcc = Acc
+    ),
+    count_occurrences_helper(Rest, SortedPair, NewAcc, Count).
+
+% eliminar_instancias([], _, []).
+% eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-
+%     (is_list(X) ->
+%         (length(X, 2) ->
+%             sort(X, SortedX),
+%             (SortedX == Pair ->
+%                 NewX = X
+%             ;
+%                 subtract(X, Pair, NewX)
+%             )
+%         ;
+%             subtract(X, Pair, NewX)
+%         )
+%     ;
+%         NewX = X
+%     ),
+%     eliminar_instancias(Rest, Pair, NewRest).
+
 procesar_listas([], []).
 procesar_listas([Group|Groups], [NewGroup|NewGroups]) :-
     (Group = ['.','.','.','.','.','.','.','.','.'] ->
-        NewGroup = Group  % Mantener grupo sin cambios si está vacío
+        NewGroup = Group
     ;
-        encontrar_parejas(Group, Pair),
-        (Pair = [] ->
-            NewGroup = Group  % Mantener grupo sin cambios si no se encuentra pareja
+        encontrar_todos_los_pares(Group, Pairs),
+        (Pairs = [] ->
+            NewGroup = Group
         ;
-            eliminar_instancias(Group, Pair, NewGroup)
+            eliminar_elementos_de_pares(Group, Pairs, NewGroup)
         )
     ),
     procesar_listas(Groups, NewGroups).
 
-
-encontrar_parejas(Group, Pair) :-           %FUNCIONA
-    find_possible_pairs(Group, Pairs),
-    select_valid_pair(Pairs, Group, Pair).
-
-find_possible_pairs(Group, Pairs) :-
+% Encuentra todos los pares desnudos únicos en el grupo
+encontrar_todos_los_pares(Group, UniquePairs) :-
     findall(
-        X,
+        SP,
         (member(X, Group),
          is_list(X),
-         length(X, 2)),
-        Pairs
+         length(X, 2),
+         sort(X, SP),
+         count_occurrences(SP, Group, 2)
+    ), Pairs),
+    list_to_set(Pairs, UniquePairs).  % Elimina duplicados
+
+% Elimina los elementos de todos los pares encontrados en las celdas no pertenecientes a pares
+eliminar_elementos_de_pares(Group, Pairs, NewGroup) :-
+    % Recoge todos los elementos de los pares
+    findall(E, (member(P, Pairs), member(E, P)), Elements),
+    list_to_set(Elements, RemoveSet),  % Elimina duplicados
+    maplist(eliminar_si_no_es_par(Pairs, RemoveSet), Group, NewGroup).
+
+% Predicado auxiliar para eliminar elementos si la celda no es un par válido
+eliminar_si_no_es_par(Pairs, RemoveSet, X, NewX) :-
+    (is_list(X) ->
+        (length(X, 2) ->
+            sort(X, SortedX),
+            (member(SortedX, Pairs) ->
+                NewX = X  % Mantiene el par intacto
+            ;
+                subtract(X, RemoveSet, NewX))  % Elimina elementos del par
+        ;
+            subtract(X, RemoveSet, NewX)  % Celdas con >2 elementos
+        )
+    ;
+        NewX = X  % Celdas resueltas (no listas)
     ).
 
-select_valid_pair(Pairs, Group, Pair) :-    %FUNCIONA
-    member(Pair, Pairs),
-    count_occurrences(Pair, Group, 2).
-
-count_occurrences(Pair, Group, Count) :-    %FUNCIONA
-    include(=(Pair), Group, Matching),
-    length(Matching, Count).
-
-% Versión mejorada de eliminar_instancias/3
-eliminar_instancias([], _, []).
-eliminar_instancias([X|Rest], Pair, [NewX|NewRest]) :-  %FUNCIONA
-    (X \= Pair, is_list(X) 
-     -> subtract(X, Pair, NewX) 
-    ;  NewX = X),
-    eliminar_instancias(Rest, Pair, NewRest).
+% Resto del código (count_occurrences, split_filas, etc.) se mantiene igual.
