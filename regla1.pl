@@ -67,7 +67,7 @@ collect_numbers_in_unit(UnitIndices, P, Numbers) :-
     maplist(get_possible_numbers(P), UnitIndices, NestedNumbers),
     flatten(NestedNumbers, Numbers).
 
-% Solo incluir números de celdas con múltiples posibilidades
+% Solo incluir números de celdas con multiples posibilidades
 get_possible_numbers(P, Index, Nums) :-
     nth0(Index, P, Poss),
     (is_list(Poss), length(Poss, L), L > 1 -> Nums = Poss ; Nums = []).

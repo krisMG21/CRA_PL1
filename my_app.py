@@ -40,28 +40,101 @@ class PrologConnector:
         else:
             return None
 
-    def aplicar_regla(self, regla, sudoku, posibilidades):
+    def aplicar_regla0(self, sudoku, posibilidades):
         # regla debe ser "regla0", "regla1", etc.
         sudoku_str = sudoku_to_prolog(sudoku)
 
         posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
-        query = f"{regla}({sudoku_str}, {posibilidades_str}, NuevoS)."
+        query = f"regla0({sudoku_str}, {posibilidades_str}, NuevoS)."
         resultados = list(self.prolog.query(query))
         if resultados:
             return resultados[0]['NuevoS']
         else:
             return sudoku
-
-    def aplicar_reglas(self, sudoku, posibilidades):
-        # Llama a aplicar_reglas(S, P, NewS, NewP) para resolver el sudoku
-        sudoku_str = sudoku_to_prolog(sudoku)
-        posibilidades_str = sudoku_to_prolog(posibilidades)
-        query = f"aplicar_reglas({sudoku_str}, {posibilidades_str}, NuevoS, NuevoP)."
+        
+    def aplicar_regla1(self, posibilidades):
+        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
+        query = f"regla1({posibilidades_str}, NuevoP)."
         resultados = list(self.prolog.query(query))
         if resultados:
-            return resultados[0]['NuevoS'], resultados[0]['NuevoP']
+            return resultados[0]['NuevoP']
         else:
-            return sudoku, posibilidades
+            return posibilidades
+        
+    def aplicar_regla2(self, posibilidades):
+        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
+        query = f"regla2({posibilidades_str}, NuevoP)."
+        resultados = list(self.prolog.query(query))
+        if resultados:
+            return resultados[0]['NuevoP']
+        else:
+            return posibilidades
+        
+    def aplicar_regla3(self, posibilidades):
+        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
+        query = f"regla3({posibilidades_str}, NuevoP)."
+        resultados = list(self.prolog.query(query))
+        if resultados:
+            return resultados[0]['NuevoP']
+        else:
+            return posibilidades
+
+
+    def aplicar_reglas(self, sudoku, posibilidades, algoritmo="default"):
+        """
+        Aplica reglas para resolver el sudoku según el algoritmo seleccionado
+        
+        Args:
+            sudoku: Lista con el sudoku actual
+            posibilidades: Lista con las posibilidades para cada celda
+            algoritmo: String que define el algoritmo a utilizar
+            
+        Returns:
+            nuevo_sudoku, nuevas_posibilidades
+        """
+        # Comportamiento predeterminado (algoritmo original)
+        if algoritmo == "default":
+            sudoku_str = sudoku_to_prolog(sudoku)
+            posibilidades_str = sudoku_to_prolog(posibilidades)
+            query = f"aplicar_reglas({sudoku_str}, {posibilidades_str}, NuevoS, NuevoP)."
+            resultados = list(self.prolog.query(query))
+            if resultados:
+                return resultados[0]['NuevoS'], resultados[0]['NuevoP']
+            else:
+                return sudoku, posibilidades
+        
+        # Algoritmo de fuerza bruta
+        elif algoritmo == "fuerza_bruta":
+            # Implementación de placeholder - aquí iría la verdadera implementación
+            # de un algoritmo de fuerza bruta
+            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de fuerza bruta"}
+            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
+        
+        # Algoritmo de backtracking
+        elif algoritmo == "backtracking":
+            # Implementación de placeholder - aquí iría la verdadera implementación
+            # de un algoritmo de backtracking
+            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de backtracking"}
+            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
+        
+        # Algoritmo de dancing links
+        elif algoritmo == "dancing_links":
+            # Implementación de placeholder - aquí iría la verdadera implementación
+            # de un algoritmo de dancing links (DLX)
+            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de Dancing Links (DLX)"}
+            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
+        
+        # Algoritmo de simulated annealing
+        elif algoritmo == "simulated_annealing":
+            # Implementación de placeholder - aquí iría la verdadera implementación
+            # de un algoritmo de simulated annealing
+            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de Simulated Annealing"}
+            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
+        
+        # Si el algoritmo no es reconocido, usar el default
+        else:
+            st.warning(f"Algoritmo '{algoritmo}' no reconocido. Usando algoritmo predeterminado.")
+            return self.aplicar_reglas(sudoku, posibilidades)
 
     def validar_movimiento(self, sudoku, index, valor):
         """
@@ -104,6 +177,43 @@ def parse_sudoku_file(file_content):
         return None
 
 # -------------------------------
+# Función para contar celdas llenas en un sudoku
+def contar_celdas_llenas(sudoku):
+    return sum(1 for celda in sudoku if celda != '.')
+
+# -------------------------------
+# Función para guardar el estado actual en el historial
+def guardar_estado_en_historial(accion, celdas_llenas=None):
+    actual_sudoku = st.session_state.sudoku.copy()
+    actual_posibilidades = st.session_state.posibilidades
+    
+    # Si es una interacción de usuario o regla0, calculamos las celdas llenas
+    if accion == "input_usuario" or accion == "regla0":
+        if celdas_llenas is None:
+            celdas_llenas = contar_celdas_llenas(actual_sudoku)
+    
+    # Creamos el registro del historial
+    registro = {
+        "sudoku": actual_sudoku,
+        "posibilidades": actual_posibilidades,
+        "accion": accion,
+        "celdas_llenas": celdas_llenas
+    }
+    
+    # Obtenemos el índice actual y el historial
+    indice_actual = st.session_state.historico_indice
+    historico = st.session_state.historico
+    
+    # Si estamos en medio del historial, eliminamos los estados futuros
+    if indice_actual < len(historico) - 1:
+        st.session_state.historico = historico[:indice_actual + 1]
+    
+    # Añadimos el nuevo estado al historial
+    st.session_state.historico.append(registro)
+    # Actualizamos el índice actual
+    st.session_state.historico_indice = len(st.session_state.historico) - 1
+
+# -------------------------------
 # Callbacks para manejar cambios sin reruns
 def on_cell_change(idx):
     # Esta función se llama cuando cambia el valor de una celda
@@ -134,6 +244,11 @@ def on_cell_change(idx):
         # Recalculamos posibilidades
         posibilidades = connector.calcular_posibilidades(sudoku)
         st.session_state.posibilidades = posibilidades
+        
+        # Guardamos el estado en el historial
+        celdas_actuales = contar_celdas_llenas(sudoku)
+        guardar_estado_en_historial("input_usuario", celdas_actuales)
+        
         # Guardamos el mensaje de éxito
         st.session_state.mensaje = {"tipo": "exito", "texto": f"Celda {idx+1}: {mensaje}"}
         # Marcamos que la UI necesita actualizarse
@@ -153,15 +268,69 @@ def on_regla(regla):
     posibilidades = st.session_state.posibilidades
     connector = st.session_state.connector
     
+    celdas_antes = contar_celdas_llenas(sudoku)
+    
     if regla == "resolver":
-        nuevo_sudoku, nuevas_poss = connector.aplicar_reglas(sudoku, posibilidades)
+        # Obtenemos el algoritmo seleccionado del dropdown
+        algoritmo = st.session_state.algoritmo_seleccionado
+        # Registramos qué algoritmo se está usando en el historial
+        accion = f"resolver ({algoritmo})"
+        nuevo_sudoku, nuevas_poss = connector.aplicar_reglas(sudoku, posibilidades, algoritmo)
+    elif regla == "regla0":
+        accion = regla
+        nuevo_sudoku = connector.aplicar_regla0(sudoku, posibilidades)
+        nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku)
+    elif regla == "regla1":
+        accion = regla
+        nuevo_sudoku = sudoku
+        nuevas_poss = connector.aplicar_regla1(posibilidades)
+    elif regla == "regla2":
+        accion = regla
+        nuevo_sudoku = sudoku
+        nuevas_poss = connector.aplicar_regla2(posibilidades)
+    elif regla == "regla3":
+        accion = regla
+        nuevo_sudoku = sudoku
+        nuevas_poss = connector.aplicar_regla3(posibilidades)
     else:
+        accion = regla
         nuevo_sudoku = connector.aplicar_regla(regla, sudoku, posibilidades)
         nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku)
     
     st.session_state.sudoku = nuevo_sudoku
     st.session_state.posibilidades = nuevas_poss
-    st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {regla} al sudoku"}
+    
+    # Guardamos el estado en el historial
+    if regla == "regla0":
+        celdas_despues = contar_celdas_llenas(nuevo_sudoku)
+        celdas_llenadas = celdas_despues - celdas_antes
+        guardar_estado_en_historial(accion, celdas_llenadas)
+    else:
+        guardar_estado_en_historial(accion)
+    
+    st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {accion} al sudoku"}
+    st.session_state.need_refresh = True
+    st.session_state.board_key = int(time.time() * 1000)
+
+# Callbacks para los botones de navegación del histórico
+def on_anterior():
+    if st.session_state.historico_indice > 0:
+        st.session_state.historico_indice -= 1
+        cargar_estado_desde_historico()
+
+def on_siguiente():
+    if st.session_state.historico_indice < len(st.session_state.historico) - 1:
+        st.session_state.historico_indice += 1
+        cargar_estado_desde_historico()
+
+def cargar_estado_desde_historico():
+    indice = st.session_state.historico_indice
+    registro = st.session_state.historico[indice]
+    
+    st.session_state.sudoku = registro["sudoku"]
+    st.session_state.posibilidades = registro["posibilidades"]
+    st.session_state.mensaje = {"tipo": "info", 
+                               "texto": f"Cargado estado histórico #{indice+1} - Acción: {registro['accion']}"}
     st.session_state.need_refresh = True
     st.session_state.board_key = int(time.time() * 1000)
 
@@ -232,6 +401,7 @@ def render_sudoku():
             with cols[col_index]:
                 if esta_vacia:
                     # Construimos el placeholder con las posibilidades actuales
+                    print(posibilidades)
                     placeholder = format_posibilidades(posibilidades[idx])
                     
                     # Para las celdas vacías, mostramos un input con las posibilidades como placeholder
@@ -253,11 +423,88 @@ def render_sudoku():
                         disabled=True,
                         label_visibility="collapsed"
                     )
-
+# Función para renderizar el historial con acciones más recientes arriba
+def render_historial():
+    st.markdown("### Historial de transformaciones")
+    
+    # Mostramos la información del estado actual
+    indice_actual = st.session_state.historico_indice
+    total_estados = len(st.session_state.historico)
+    
+    # Mostramos información sobre el estado actual
+    if total_estados > 0:
+        estado_actual = st.session_state.historico[indice_actual]
+        info_col1, info_col2, info_col3 = st.columns(3)
+        
+        with info_col1:
+            st.metric("Estado actual", f"{indice_actual + 1} de {total_estados}")
+        
+        with info_col2:
+            accion = estado_actual["accion"]
+            st.metric("Acción aplicada", accion)
+        
+        with info_col3:
+            if "celdas_llenas" in estado_actual and estado_actual["celdas_llenas"] is not None:
+                if accion == "regla0":
+                    st.metric("Celdas completadas", estado_actual["celdas_llenas"])
+                else:
+                    st.metric("Total celdas llenas", estado_actual["celdas_llenas"])
+    
+    # Botones para navegar por el historial
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.button("◀ Anterior", 
+                key=f"anterior_{st.session_state.board_key}", 
+                on_click=on_anterior,
+                disabled=(indice_actual <= 0),
+                use_container_width=True)
+    
+    with col2:
+        st.button("Siguiente ▶", 
+                key=f"siguiente_{st.session_state.board_key}", 
+                on_click=on_siguiente,
+                disabled=(indice_actual >= total_estados - 1),
+                use_container_width=True)
+    
+    # Tabla con el resumen del historial
+    if total_estados > 0:
+        st.markdown("#### Resumen de acciones")
+        
+        # Creamos una tabla para mostrar el historial
+        tabla_data = []
+        
+        # Recorremos el historial y creamos los datos de la tabla
+        for i, registro in enumerate(st.session_state.historico):
+            accion = registro["accion"]
+            celdas_info = ""
+            
+            if "celdas_llenas" in registro and registro["celdas_llenas"] is not None:
+                if accion == "regla0":
+                    celdas_info = f"+{registro['celdas_llenas']} celdas"
+                else:
+                    celdas_info = f"{registro['celdas_llenas']} celdas"
+            
+            # Destacamos el estado actual
+            estado = "▶" if i == indice_actual else ""
+            
+            tabla_data.append({
+                "Estado": estado,
+                "#": i + 1,
+                "Acción": accion,
+                "Información": celdas_info
+            })
+        
+        # Invertimos el orden de los datos para que los más recientes aparezcan arriba
+        tabla_data.reverse()
+        
+        # Mostramos la tabla con los datos ordenados de más reciente a más antiguo
+        st.dataframe(tabla_data, hide_index=True, use_container_width=True)
 # -------------------------------
 # Configuración y flujo principal de Streamlit
 def main():
-    st.set_page_config(page_title="Sudoku Solver", layout="wide")
+    # Configurar página con dos barras laterales
+    st.set_page_config(page_title="Sudoku Solver", layout="wide", initial_sidebar_state="expanded")
     
     # Inicializamos variables del estado si no existen
     if 'board_key' not in st.session_state:
@@ -269,73 +516,128 @@ def main():
     if 'mensaje' not in st.session_state:
         st.session_state.mensaje = None
     
+    # Inicializamos las variables del histórico
+    if 'historico' not in st.session_state:
+        st.session_state.historico = []
+    
+    if 'historico_indice' not in st.session_state:
+        st.session_state.historico_indice = -1
+    
+    # Inicializamos la variable para el algoritmo seleccionado
+    if 'algoritmo_seleccionado' not in st.session_state:
+        st.session_state.algoritmo_seleccionado = "default"
+    
     # Inicializamos la conexión con Prolog (se hace una única vez)
     if 'connector' not in st.session_state:
         st.session_state.connector = PrologConnector()
     
-    # Texto explicativo en la parte superior
-    st.markdown("""
-    # SudoQ
-    Esta aplicación resuelve sudokus de 9x9 utilizando un motor de reglas implementado en Prolog.
+    # Panel lateral izquierdo para importar sudoku
+    with st.sidebar:
+        st.header("Importar Sudoku")
+        uploaded_file = st.file_uploader("Sube un archivo .txt con el sudoku", 
+                                        type=["txt"], 
+                                        key=f"uploader_{st.session_state.board_key}")
+        
+        if uploaded_file is not None:
+            file_bytes = uploaded_file.read()
+            sudoku = parse_sudoku_file(file_bytes)
+            if sudoku is not None:
+                st.session_state.sudoku = sudoku
+                # Calculamos las posibilidades iniciales llamando a Prolog
+                st.session_state.posibilidades = st.session_state.connector.calcular_posibilidades(sudoku)
+                
+                # Reiniciamos el histórico y añadimos el estado inicial
+                st.session_state.historico = []
+                st.session_state.historico_indice = 0
+                
+                # Guardamos el estado inicial en el histórico
+                guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
+                
+                st.success("Sudoku cargado correctamente.")
     
-    El sudoku se representa como una lista de 81 elementos. Las celdas vacías se indican con un punto ('.'). 
-    Antes de mostrar el sudoku, se calculan las posibilidades de cada celda vacía. Podrás interactuar 
-    ingresando números en las celdas vacías; se consultará Prolog para validar cada movimiento. Además, dispones de
-    botones para aplicar reglas parciales (regla0, regla1, regla2 y regla3) y un botón para resolver el sudoku 
-    automáticamente mediante la función aplicar_reglas.
-    """)
+    # Crear columnas para el contenido principal y la barra lateral derecha
+    main_col, right_sidebar_col = st.columns([3, 1])
     
-    # Panel lateral para importar sudoku
-    st.sidebar.header("Importar Sudoku")
-    uploaded_file = st.sidebar.file_uploader("Sube un archivo .txt con el sudoku", 
-                                             type=["txt"], 
-                                             key=f"uploader_{st.session_state.board_key}")
+    with main_col:
+        # Texto explicativo en la parte superior
+        st.markdown("""
+        # SudoQ
+        """)
+        
+        # Si ya se cargó un sudoku, lo mostramos
+        if 'sudoku' in st.session_state and 'posibilidades' in st.session_state:
+            # Renderizamos el sudoku
+            render_sudoku()
+            
+            # Renderizamos el historial debajo del sudoku
+            render_historial()
+        else:
+            st.info("Por favor, sube un sudoku en el panel lateral para comenzar.")
     
-    if uploaded_file is not None:
-        file_bytes = uploaded_file.read()
-        sudoku = parse_sudoku_file(file_bytes)
-        if sudoku is not None:
-            st.session_state.sudoku = sudoku
-            # Calculamos las posibilidades iniciales llamando a Prolog
-            st.session_state.posibilidades = st.session_state.connector.calcular_posibilidades(sudoku)
-            st.sidebar.success("Sudoku cargado correctamente.")
-    
-    # Si ya se cargó un sudoku, lo mostramos en el centro
-    if 'sudoku' in st.session_state and 'posibilidades' in st.session_state:
-        # Renderizamos el sudoku (centrado)
-        render_sudoku()
-        
-        st.markdown("---")
-        st.markdown("### Acciones")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        
-        # Usamos on_click con callbacks para evitar reruns
-        col1.button("Aplicar regla 0", 
-                   key=f"regla0_{st.session_state.board_key}", 
-                   on_click=on_regla, 
-                   args=("regla0",))
-        
-        col2.button("Aplicar regla 1", 
-                   key=f"regla1_{st.session_state.board_key}", 
-                   on_click=on_regla, 
-                   args=("regla1",))
-        
-        col3.button("Aplicar regla 2", 
-                   key=f"regla2_{st.session_state.board_key}", 
-                   on_click=on_regla, 
-                   args=("regla2",))
-        
-        col4.button("Aplicar regla 3", 
-                   key=f"regla3_{st.session_state.board_key}", 
-                   on_click=on_regla, 
-                   args=("regla3",))
-        
-        col5.button("Resolver Sudoku", 
-                   key=f"resolver_{st.session_state.board_key}", 
-                   on_click=on_regla, 
-                   args=("resolver",))
-    else:
-        st.info("Por favor, sube un sudoku en el panel lateral para comenzar.")
+    # Panel lateral derecho para los botones de acción
+    with right_sidebar_col:
+        if 'sudoku' in st.session_state and 'posibilidades' in st.session_state:
+
+            st.markdown("""
+            ### Descripción de Reglas
+            
+            - **Regla 0**: 
+            - **Regla 1**: 
+            - **Regla 2**: 
+            - **Regla 3**: 
+            """)
+            st.markdown("### Acciones")
+            st.button("Aplicar regla 0", 
+                    key=f"regla0_{st.session_state.board_key}", 
+                    on_click=on_regla, 
+                    args=("regla0",),
+                    use_container_width=True)
+            
+            st.button("Aplicar regla 1", 
+                    key=f"regla1_{st.session_state.board_key}", 
+                    on_click=on_regla, 
+                    args=("regla1",),
+                    use_container_width=True)
+            
+            st.button("Aplicar regla 2", 
+                    key=f"regla2_{st.session_state.board_key}", 
+                    on_click=on_regla, 
+                    args=("regla2",),
+                    use_container_width=True)
+            
+            st.button("Aplicar regla 3", 
+                    key=f"regla3_{st.session_state.board_key}", 
+                    on_click=on_regla, 
+                    args=("regla3",),
+                    use_container_width=True)
+            
+            st.markdown("---")
+            
+            # Dropdown para seleccionar el algoritmo de resolución
+            st.markdown("### Algoritmo de resolución")
+            algoritmos = {
+                "R0-1-2-3": "R0-1-2-3",
+                "R1-2-3-0": "R1-2-3-0",
+                "R1-0-2-0-3-0": "R1-0-2-0-3-0",
+                "R3-0-2-0-1-0": "R3-0-2-0-1-0",
+            }
+            
+            st.selectbox(
+                "Selecciona un algoritmo:",
+                options=list(algoritmos.keys()),
+                format_func=lambda x: algoritmos[x],
+                key="algoritmo_seleccionado",
+                index=0
+            )
+            
+            st.button("Resolver Sudoku", 
+                    key=f"resolver_{st.session_state.board_key}", 
+                    on_click=on_regla, 
+                    args=("resolver",),
+                    use_container_width=True,
+                    type="primary")
+            
+            
 
 if __name__ == '__main__':
     main()
