@@ -205,20 +205,14 @@ aplicar_reglas(S, P, NewS, NewP) :-
 
 test_regla2() :-
     p_regla2(P),
-    (regla2(P, TempP1), P \= TempP1 ->
-            write('REGLA 2 APLICADA!'), nl,
-            NewP = TempP1,
-            mostrar_sudoku(NewP)
-        ;
-            write('No fufa ;_;')
-    ).
+    regla2(P, P1),
+    regla2(P1, P2),
+    regla2(P2, P3),
+    mostrar_sudoku(P3).
 
 test_regla3() :-
     p_regla3(P),
-    (regla3(P, TempP), P \= TempP ->
-            write('REGLA 3 APLICADA!'), nl,
-            NewP = TempP,
-            mostrar_sudoku(NewP)
-        ;
-            write('No fufa ;_;')
-    ).
+    regla3(P, P1),
+    regla3(P1, P2),
+    regla3(P2, P3),
+    mostrar_sudoku(P3).

@@ -29,11 +29,11 @@ tripletas_filas(P, NewP) :-
 % Aplica la eliminación en columnas: se transpone,
 % se procesa como filas y se transpone de vuelta.
 tripletas_columnas(P, NewP) :-
-    split_filas(P, Rows),
-    transponer(Rows, Columns),
+    transponer(P, TP),
+    split_filas(TP, Columns),
     procesar_listas_3(Columns, NewColumns),
-    transponer(NewColumns, NewRows),
-    aplanar_filas(NewRows, NewP).
+    aplanar_filas(NewColumns, NewTP),
+    transponer(NewTP, NewP).
 
 % Aplica la eliminación en cuadrantes
 tripletas_cuadrantes(P, NewP) :-
@@ -43,42 +43,64 @@ tripletas_cuadrantes(P, NewP) :-
     aplanar_cuadrantes(NewQuads, NewRows),
     aplanar_filas(NewRows, NewP).
 
+procesar_listas_3([], []).
+procesar_listas_3([Group|Groups], [NewGroup|NewGroups]) :-
+    (Group = ['.','.','.','.','.','.','.','.','.'] ->
+        NewGroup = Group
+    ;
+        encontrar_todas_las_tripletas(Group, Triplets),
+        (Triplets = [] ->
+            NewGroup = Group
+        ;
+            eliminar_elementos_de_tripletas(Group, Triplets, NewGroup)
+        )
+    ),
+    procesar_listas_3(Groups, NewGroups).
 
-encontrar_tripletas(Group, Triplet) :-           %FUNCIONA
-    find_possible_triplets(Group, Triplets),
-    select_valid_triplet(Triplets, Group, Triplet).
-
-find_possible_triplets(Group, Triplets) :-        %FUNCIONA
+% Encuentra todas las tripletas desnudas únicas en el grupo
+encontrar_todas_las_tripletas(Group, UniqueTriplets) :-
     findall(
-        [A,B,C], 
-        (member(X, Group), 
-         is_list(X), 
-         length(X, 3), 
-         X = [A,B,C]), 
-        Triplets
+        ST,
+        (member(X, Group),
+         is_list(X),
+         length(X, 3),
+         sort(X, ST),
+         count_occurrences_3(ST, Group, 3)
+    ), Triplets),
+    list_to_set(Triplets, UniqueTriplets).  % Elimina duplicados
+
+% Elimina los elementos de las tripletas válidas en celdas no pertenecientes a tripletas
+eliminar_elementos_de_tripletas(Group, Triplets, NewGroup) :-
+    findall(E, (member(T, Triplets), member(E, T)), Elements),
+    list_to_set(Elements, RemoveSet),
+    maplist(eliminar_si_no_es_tripleta(Triplets, RemoveSet), Group, NewGroup).
+
+% Predicado auxiliar para eliminar elementos
+eliminar_si_no_es_tripleta(Triplets, RemoveSet, X, NewX) :-
+    (is_list(X) ->
+        (length(X, 3) ->
+            sort(X, SortedX),
+            (member(SortedX, Triplets) ->
+                NewX = X  % Mantiene la tripleta
+            ;
+                subtract(X, RemoveSet, NewX)  % Elimina elementos
+            )
+        ;
+            subtract(X, RemoveSet, NewX)  % Celdas con >3 elementos
+        )
+    ;
+        NewX = X  % Celdas resueltas
     ).
 
-select_valid_triplet(Triplets, Group, Triplet) :-    %FUNCIONA
-    member(Triplet, Triplets),
-    count_occurrences_3(Triplet, Group, 3).
+% Cuenta ocurrencias de una tripleta ordenada
+count_occurrences_3(SortedTriplet, Group, Count) :-
+    count_occurrences_helper_3(Group, SortedTriplet, 0, Count).
 
-count_occurrences_3(Triplet, Group, Count) :-    %FUNCIONA
-    include(=(Triplet), Group, Matching),
-    length(Matching, Count).
-
-% Versión mejorada de eliminar_instancias/3
-eliminar_instancias_3([], _, []).
-eliminar_instancias_3([X|Rest], Triplet, [NewX|NewRest]) :-  %FUNCIONA
-    (X \= Triplet, is_list(X) 
-     -> subtract(X, Triplet, NewX) 
-     ;  NewX = X),
-    eliminar_instancias_3(Rest, Triplet, NewRest).
-
-procesar_listas_3([], []).                    %FUNCIONA
-procesar_listas_3([['.','.','.','.','.','.','.','.','.']|Groups],[NewGroup|NewGroups]) :-
-    procesar_listas_3(Groups,NewGroups),
-    NewGroup = ['.','.','.','.','.','.','.','.','.'].
-procesar_listas_3([Group|_], [NewGroup|_]) :-
-    encontrar_tripletas(Group,Triplet),
-    eliminar_instancias_3(Group,Triplet,NewGroup).
-    
+count_occurrences_helper_3([], _, Count, Count).
+count_occurrences_helper_3([X|Rest], SortedTriplet, Acc, Count) :-
+    (is_list(X), length(X, 3), sort(X, SX), SX == SortedTriplet ->
+        NewAcc is Acc + 1
+    ;
+        NewAcc = Acc
+    ),
+    count_occurrences_helper_3(Rest, SortedTriplet, NewAcc, Count).
