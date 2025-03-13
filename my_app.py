@@ -270,6 +270,10 @@ def on_regla(regla):
     
     celdas_antes = contar_celdas_llenas(sudoku)
     
+    # Medimos el tiempo de ejecución
+    import time
+    tiempo_inicio = time.time()
+    
     if regla == "resolver":
         # Obtenemos el algoritmo seleccionado del dropdown
         algoritmo = st.session_state.algoritmo_seleccionado
@@ -297,6 +301,11 @@ def on_regla(regla):
         nuevo_sudoku = connector.aplicar_regla(regla, sudoku, posibilidades)
         nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku)
     
+    # Calculamos el tiempo de ejecución en milisegundos
+    tiempo_fin = time.time()
+    tiempo_ejecucion = round((tiempo_fin - tiempo_inicio) * 1000, 2)  # en milisegundos
+    st.session_state.tiempo_ejecucion = tiempo_ejecucion
+    
     st.session_state.sudoku = nuevo_sudoku
     st.session_state.posibilidades = nuevas_poss
     
@@ -308,7 +317,7 @@ def on_regla(regla):
     else:
         guardar_estado_en_historial(accion)
     
-    st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {accion} al sudoku"}
+    st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {accion} al sudoku (tiempo: {tiempo_ejecucion} ms)"}
     st.session_state.need_refresh = True
     st.session_state.board_key = int(time.time() * 1000)
 
@@ -423,7 +432,180 @@ def render_sudoku():
                         disabled=True,
                         label_visibility="collapsed"
                     )
-# Función para renderizar el historial con acciones más recientes arriba
+
+def plot_historial_data():
+    if len(st.session_state.historico) > 0:
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import numpy as np
+        
+        # Extraemos los datos para el gráfico
+        datos = []
+        for i, registro in enumerate(st.session_state.historico):
+            accion = registro["accion"]
+            
+            # Calculamos el número de posibilidades con un solo valor
+            posibilidades_un_valor = 0
+            if "posibilidades" in registro:
+                for pos in registro["posibilidades"]:
+                    if pos != '.' and isinstance(pos, list) and len(pos) == 1:
+                        posibilidades_un_valor += 1
+            
+            # Calculamos casillas resueltas
+            casillas_resueltas = 0
+            if accion == "regla0" and "celdas_llenas" in registro:
+                casillas_resueltas = registro["celdas_llenas"]
+            
+            # Añadimos el tiempo de ejecución (si existe)
+            tiempo_ejecucion = registro.get("tiempo_ejecucion", 0)
+            if tiempo_ejecucion == "N/A":
+                tiempo_ejecucion = 0
+                
+            datos.append({
+                "Paso": i + 1,
+                "Acción": accion,
+                "Posibilidades 1 valor": posibilidades_un_valor,
+                "Casillas resueltas": casillas_resueltas,
+                "Tiempo (ms)": tiempo_ejecucion
+            })
+        
+        # Creamos un DataFrame
+        df = pd.DataFrame(datos)
+        
+        # Añadimos columnas acumuladas para los valores que lo requieren
+        df["Posibilidades 1 valor (acumulado)"] = df["Posibilidades 1 valor"].cumsum()
+        df["Casillas resueltas (acumulado)"] = df["Casillas resueltas"].cumsum()
+        
+        # Ofrecemos la visualización
+        st.markdown("### Visualización de datos")
+        
+        # Opciones de visualización
+        opcion_grafico = st.selectbox(
+            "Selecciona un tipo de gráfico:",
+            ["Posibilidades y Casillas (acumulado)", "Tiempo de ejecución"]
+        )
+        
+        # Configuración común para los gráficos
+        plt.style.use('seaborn-v0_8-darkgrid')
+        
+        # Generamos el gráfico seleccionado
+        if opcion_grafico == "Posibilidades y Casillas (acumulado)":
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Gráfico para posibilidades con 1 valor (acumulado)
+            ax.plot(df["Paso"], df["Posibilidades 1 valor (acumulado)"], 
+                    marker='o', linestyle='-', linewidth=2, markersize=8, 
+                    color='#1f77b4', label='Posibilidades con 1 valor (acumulado)')
+            
+            # Gráfico para casillas resueltas (acumulado)
+            ax.plot(df["Paso"], df["Casillas resueltas (acumulado)"], 
+                    marker='s', linestyle='-', linewidth=2, markersize=8, 
+                    color='#ff7f0e', label='Casillas resueltas (acumulado)')
+            
+            # Añadimos los valores no acumulados como puntos más pequeños
+            ax2 = ax.twinx()
+            ax2.plot(df["Paso"], df["Posibilidades 1 valor"], 
+                    marker='o', linestyle='--', linewidth=1, markersize=5, 
+                    color='#17becf', label='Posibilidades con 1 valor (por paso)')
+            ax2.plot(df["Paso"], df["Casillas resueltas"], 
+                    marker='s', linestyle='--', linewidth=1, markersize=5, 
+                    color='#d62728', label='Casillas resueltas (por paso)')
+            
+            # Configuramos los ejes
+            ax.set_xlabel("Paso", fontsize=12)
+            ax.set_ylabel("Valores acumulados", fontsize=12)
+            ax2.set_ylabel("Valores por paso", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7)
+            
+            # Configuramos los límites de los ejes
+            ax.set_xlim(0.5, len(df) + 0.5)
+            ax.set_xticks(np.arange(1, len(df) + 1))
+            
+            # Combinamos las leyendas de ambos ejes
+            lines1, labels1 = ax.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=10)
+            
+            # Título del gráfico
+            plt.title("Evolución de posibilidades y casillas resueltas", fontsize=14)
+            
+        else:  # Tiempo de ejecución
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Gráfico para tiempo de ejecución (no acumulado)
+            ax.plot(df["Paso"], df["Tiempo (ms)"], 
+                    marker='o', linestyle='-', linewidth=2, markersize=8, 
+                    color='#2ca02c', label='Tiempo de ejecución')
+            
+            # Añadimos etiquetas con los valores en cada punto
+            for i, txt in enumerate(df["Tiempo (ms)"]):
+                if txt > 0:  # Solo mostramos etiquetas para valores positivos
+                    ax.annotate(f"{txt} ms", 
+                                (df["Paso"][i], df["Tiempo (ms)"][i]),
+                                textcoords="offset points", 
+                                xytext=(0,10), 
+                                ha='center',
+                                fontsize=9)
+            
+            # Configuramos los ejes
+            ax.set_xlabel("Paso", fontsize=12)
+            ax.set_ylabel("Tiempo (ms)", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7)
+            
+            # Configuramos los límites de los ejes
+            ax.set_xlim(0.5, len(df) + 0.5)
+            ax.set_xticks(np.arange(1, len(df) + 1))
+            
+            # Añadimos las acciones realizadas en cada paso como etiquetas en el eje x
+            plt.xticks(rotation=45, ha='right')
+            
+            # Leyenda
+            ax.legend(loc='upper left', fontsize=10)
+            
+            # Título del gráfico
+            plt.title("Tiempo de ejecución por paso", fontsize=14)
+        
+        # Ajustamos el layout para que no se corten los elementos
+        plt.tight_layout()
+        
+        # Mostramos el gráfico
+        st.pyplot(fig)
+        
+        # Ofrecemos el DataFrame para análisis adicional
+        st.dataframe(df)
+
+def guardar_estado_en_historial(accion, celdas_llenas=None):
+    actual_sudoku = st.session_state.sudoku.copy()
+    actual_posibilidades = st.session_state.posibilidades
+    
+    # Si es una interacción de usuario o regla0, calculamos las celdas llenas
+    if accion == "input_usuario" or accion == "regla0":
+        if celdas_llenas is None:
+            celdas_llenas = contar_celdas_llenas(actual_sudoku)
+    
+    # Creamos el registro del historial
+    registro = {
+        "sudoku": actual_sudoku,
+        "posibilidades": actual_posibilidades,
+        "accion": accion,
+        "celdas_llenas": celdas_llenas,
+        "tiempo_ejecucion": st.session_state.get("tiempo_ejecucion", "N/A")
+    }
+    
+    # Obtenemos el índice actual y el historial
+    indice_actual = st.session_state.historico_indice
+    historico = st.session_state.historico
+    
+    # Si estamos en medio del historial, eliminamos los estados futuros
+    if indice_actual < len(historico) - 1:
+        st.session_state.historico = historico[:indice_actual + 1]
+    
+    # Añadimos el nuevo estado al historial
+    st.session_state.historico.append(registro)
+    # Actualizamos el índice actual
+    st.session_state.historico_indice = len(st.session_state.historico) - 1
+
+
 def render_historial():
     st.markdown("### Historial de transformaciones")
     
@@ -485,6 +667,22 @@ def render_historial():
                 else:
                     celdas_info = f"{registro['celdas_llenas']} celdas"
             
+            # Calculamos el número de posibilidades con un solo valor
+            posibilidades_un_valor = 0
+            casillas_resueltas = 0
+            
+            if "posibilidades" in registro:
+                for pos in registro["posibilidades"]:
+                    if pos != '.' and isinstance(pos, list) and len(pos) == 1:
+                        posibilidades_un_valor += 1
+            
+            # Calculamos casillas resueltas (para regla0 ya lo tenemos, para otras reglas es 0)
+            if accion == "regla0" and "celdas_llenas" in registro:
+                casillas_resueltas = registro["celdas_llenas"]
+            
+            # Añadimos el tiempo de ejecución (si existe)
+            tiempo_ejecucion = registro.get("tiempo_ejecucion", "N/A")
+            
             # Destacamos el estado actual
             estado = "▶" if i == indice_actual else ""
             
@@ -492,6 +690,9 @@ def render_historial():
                 "Estado": estado,
                 "#": i + 1,
                 "Acción": accion,
+                "Posibilidades 1 valor": posibilidades_un_valor,
+                "Casillas resueltas": casillas_resueltas,
+                "Tiempo (ms)": tiempo_ejecucion,
                 "Información": celdas_info
             })
         
@@ -500,6 +701,24 @@ def render_historial():
         
         # Mostramos la tabla con los datos ordenados de más reciente a más antiguo
         st.dataframe(tabla_data, hide_index=True, use_container_width=True)
+        
+        # Botón para exportar la tabla
+        if st.button("Exportar datos del historial", key="exportar_historial"):
+            # Convertimos los datos a un DataFrame de pandas
+            import pandas as pd
+            df = pd.DataFrame(tabla_data)
+            
+            # Generamos un CSV
+            csv = df.to_csv(index=False)
+            
+            # Ofrecemos la descarga
+            st.download_button(
+                label="Descargar CSV",
+                data=csv,
+                file_name="sudoku_historial.csv",
+                mime="text/csv",
+                key="descargar_csv"
+            )
 # -------------------------------
 # Configuración y flujo principal de Streamlit
 def main():
@@ -526,6 +745,10 @@ def main():
     # Inicializamos la variable para el algoritmo seleccionado
     if 'algoritmo_seleccionado' not in st.session_state:
         st.session_state.algoritmo_seleccionado = "default"
+    
+    # Inicializamos la variable para el tiempo de ejecución
+    if 'tiempo_ejecucion' not in st.session_state:
+        st.session_state.tiempo_ejecucion = "N/A"
     
     # Inicializamos la conexión con Prolog (se hace una única vez)
     if 'connector' not in st.session_state:
@@ -571,6 +794,10 @@ def main():
             
             # Renderizamos el historial debajo del sudoku
             render_historial()
+            
+            # Añadimos la sección de visualización de datos
+            with st.expander("Visualización de datos para gráficos", expanded=False):
+                plot_historial_data()
         else:
             st.info("Por favor, sube un sudoku en el panel lateral para comenzar.")
     
@@ -581,10 +808,10 @@ def main():
             st.markdown("""
             ### Descripción de Reglas
             
-            - **Regla 0**: 
-            - **Regla 1**: 
-            - **Regla 2**: 
-            - **Regla 3**: 
+            - **Regla 0**: Completa celdas con una única posibilidad
+            - **Regla 1**: Reduce posibilidades en filas
+            - **Regla 2**: Reduce posibilidades en columnas
+            - **Regla 3**: Reduce posibilidades en bloques 3x3
             """)
             st.markdown("### Acciones")
             st.button("Aplicar regla 0", 
@@ -636,8 +863,7 @@ def main():
                     args=("resolver",),
                     use_container_width=True,
                     type="primary")
-            
-            
 
 if __name__ == '__main__':
     main()
+  
