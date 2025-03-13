@@ -1,5 +1,5 @@
 % Regla 1: Si un número aparece solo en una lista de posibilidades de una unidad (fila, columna, bloque), fijarlo allí y eliminarlo de las demás.
-regla1(_, P, NewP) :-
+regla1(P, NewP) :-
     write("Estado inicial: "), write(P), nl,
     process_all_units(P, NewP),
     write("Estado despues de aplicar Regla 1: "), write(NewP), nl,
