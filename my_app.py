@@ -283,7 +283,7 @@ def on_regla(regla):
     elif regla == "regla0":
         accion = regla
         nuevo_sudoku = connector.aplicar_regla0(sudoku, posibilidades)
-        nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku)
+        nuevas_poss = connector.calcular_posibilidades(nuevo_sudoku) if sudoku != nuevo_sudoku else posibilidades
     elif regla == "regla1":
         accion = regla
         nuevo_sudoku = sudoku
@@ -331,6 +331,7 @@ def on_siguiente():
     if st.session_state.historico_indice < len(st.session_state.historico) - 1:
         st.session_state.historico_indice += 1
         cargar_estado_desde_historico()
+
 
 def cargar_estado_desde_historico():
     indice = st.session_state.historico_indice
@@ -605,15 +606,17 @@ def guardar_estado_en_historial(accion, celdas_llenas=None):
     # Actualizamos el índice actual
     st.session_state.historico_indice = len(st.session_state.historico) - 1
 
+def set_hist_index(target_idx):
+    st.session_state.historico_indice = target_idx
+    cargar_estado_desde_historico()
 
 def render_historial():
     st.markdown("### Historial de transformaciones")
     
-    # Mostramos la información del estado actual
     indice_actual = st.session_state.historico_indice
     total_estados = len(st.session_state.historico)
     
-    # Mostramos información sobre el estado actual
+    # Información del estado actual
     if total_estados > 0:
         estado_actual = st.session_state.historico[indice_actual]
         info_col1, info_col2, info_col3 = st.columns(3)
@@ -627,97 +630,97 @@ def render_historial():
         
         with info_col3:
             if "celdas_llenas" in estado_actual and estado_actual["celdas_llenas"] is not None:
-                if accion == "regla0":
-                    st.metric("Celdas completadas", estado_actual["celdas_llenas"])
-                else:
-                    st.metric("Total celdas llenas", estado_actual["celdas_llenas"])
+                metric_value = (estado_actual["celdas_llenas"] 
+                              if estado_actual["accion"] == "regla0" 
+                              else contar_celdas_llenas(estado_actual["sudoku"]))
+                st.metric("Celdas llenas", metric_value)
     
-    # Botones para navegar por el historial
+    # Botones de navegación
     col1, col2 = st.columns(2)
-    
     with col1:
         st.button("◀ Anterior", 
-                key=f"anterior_{st.session_state.board_key}", 
                 on_click=on_anterior,
                 disabled=(indice_actual <= 0),
                 use_container_width=True)
     
     with col2:
         st.button("Siguiente ▶", 
-                key=f"siguiente_{st.session_state.board_key}", 
                 on_click=on_siguiente,
                 disabled=(indice_actual >= total_estados - 1),
                 use_container_width=True)
     
-    # Tabla con el resumen del historial
+    # Nueva tabla con botones
     if total_estados > 0:
         st.markdown("#### Resumen de acciones")
         
-        # Creamos una tabla para mostrar el historial
-        tabla_data = []
+        # Encabezados de la tabla
+        cols = st.columns([1,3,3,3,3,4])
+        with cols[0]: st.markdown("**Paso**")
+        with cols[1]: st.markdown("**Acción**")
+        with cols[2]: st.markdown("**Posibilidades únicas**")
+        with cols[3]: st.markdown("**Celdas resueltas**")
+        with cols[4]: st.markdown("**Tiempo (ms)**")
+        with cols[5]: st.markdown("**Detalles**")
         
-        # Recorremos el historial y creamos los datos de la tabla
-        for i, registro in enumerate(st.session_state.historico):
-            accion = registro["accion"]
-            celdas_info = ""
+        # Filas con botones
+        for original_idx in reversed(range(len(st.session_state.historico))):
+            registro = st.session_state.historico[original_idx]
+            is_current = original_idx == indice_actual
             
-            if "celdas_llenas" in registro and registro["celdas_llenas"] is not None:
-                if accion == "regla0":
-                    celdas_info = f"+{registro['celdas_llenas']} celdas"
-                else:
-                    celdas_info = f"{registro['celdas_llenas']} celdas"
+            # Cálculo de métricas
+            posibilidades_un_valor = sum(1 for pos in registro["posibilidades"] 
+                                    if isinstance(pos, list) and len(pos) == 1)
             
-            # Calculamos el número de posibilidades con un solo valor
-            posibilidades_un_valor = 0
-            casillas_resueltas = 0
+            celdas_resueltas = (registro["celdas_llenas"] 
+                               if registro["accion"] == "regla0" 
+                               else 0)
             
-            if "posibilidades" in registro:
-                for pos in registro["posibilidades"]:
-                    if pos != '.' and isinstance(pos, list) and len(pos) == 1:
-                        posibilidades_un_valor += 1
+            tiempo = registro.get("tiempo_ejecucion", "N/A")
             
-            # Calculamos casillas resueltas (para regla0 ya lo tenemos, para otras reglas es 0)
-            if accion == "regla0" and "celdas_llenas" in registro:
-                casillas_resueltas = registro["celdas_llenas"]
+            # Crear fila
+            cols = st.columns([1,3,3,3,3,4])
+            with cols[0]:
+                # Botón de navegación con estilo condicional
+                btn_style = "primary" if is_current else "secondary"
+                st.button(
+                    str(original_idx + 1),
+                    key=f"hist_{original_idx}",
+                    on_click=set_hist_index,
+                    args=(original_idx,),
+                    type=btn_style,
+                    use_container_width=True
+                )
             
-            # Añadimos el tiempo de ejecución (si existe)
-            tiempo_ejecucion = registro.get("tiempo_ejecucion", "N/A")
-            
-            # Destacamos el estado actual
-            estado = "▶" if i == indice_actual else ""
-            
-            tabla_data.append({
-                "Estado": estado,
-                "#": i + 1,
-                "Acción": accion,
-                "Posibilidades 1 valor": posibilidades_un_valor,
-                "Casillas resueltas": casillas_resueltas,
-                "Tiempo (ms)": tiempo_ejecucion,
-                "Información": celdas_info
-            })
-        
-        # Invertimos el orden de los datos para que los más recientes aparezcan arriba
-        tabla_data.reverse()
-        
-        # Mostramos la tabla con los datos ordenados de más reciente a más antiguo
-        st.dataframe(tabla_data, hide_index=True, use_container_width=True)
-        
-        # Botón para exportar la tabla
-        if st.button("Exportar datos del historial", key="exportar_historial"):
-            # Convertimos los datos a un DataFrame de pandas
+            # Resto de columnas
+            with cols[1]: st.write(registro["accion"])
+            with cols[2]: st.write(posibilidades_un_valor)
+            with cols[3]: st.write(celdas_resueltas if registro["accion"] == "regla0" else "-")
+            with cols[4]: st.write(f"{tiempo} ms" if isinstance(tiempo, (int, float)) else tiempo)
+            with cols[5]: 
+                if registro["accion"] == "regla0":
+                    st.write(f"Resueltas: {celdas_resueltas}")
+                elif registro["accion"] == "input_usuario":
+                    st.write(f"Celda modificada: {registro.get('celda', '')}")
+
+        # Mantener funcionalidad de exportación
+        if st.button("Exportar historial como CSV"):
             import pandas as pd
-            df = pd.DataFrame(tabla_data)
-            
-            # Generamos un CSV
-            csv = df.to_csv(index=False)
-            
-            # Ofrecemos la descarga
+            datos = []
+            for i, registro in enumerate(st.session_state.historico):
+                datos.append({
+                    "Paso": i+1,
+                    "Acción": registro["accion"],
+                    "Posibilidades Únicas": sum(1 for pos in registro["posibilidades"] 
+                                              if isinstance(pos, list) and len(pos) == 1),
+                    "Celdas Resueltas": registro.get("celdas_llenas", 0),
+                    "Tiempo (ms)": registro.get("tiempo_ejecucion", "N/A")
+                })
+            df = pd.DataFrame(datos)
             st.download_button(
                 label="Descargar CSV",
-                data=csv,
+                data=df.to_csv(index=False),
                 file_name="sudoku_historial.csv",
-                mime="text/csv",
-                key="descargar_csv"
+                mime="text/csv"
             )
 # -------------------------------
 # Configuración y flujo principal de Streamlit
