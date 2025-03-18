@@ -44,3 +44,19 @@ class PrologConnector:
         query = f"regla3({sudoku_to_prolog(posibilidades)}, NuevoP)."
         resultados = list(self.prolog.query(query))
         return resultados[0]['NuevoP'] if resultados else posibilidades
+
+    def validar_movimiento(self, sudoku, index, valor):
+        posibilidades = self.calcular_posibilidades(sudoku)
+        # La variable 'posibilidades' es una lista de 81 elementos. Para la celda ya llena se devuelve '.'
+        celda_posibles = posibilidades[index]
+        # Si la celda no está vacía, no se permite el cambio
+        if sudoku[index] != '.':
+            return False, f"La celda ya contiene {sudoku[index]}"
+        try:
+            valor_int = int(valor)
+        except:
+            return False, "Debe ingresar un número entre 1 y 9"
+        if valor_int in celda_posibles:
+            return True, "Movimiento válido"
+        else:
+            return False, f"El número {valor_int} no es una posibilidad en esa celda.\nOpciones: {celda_posibles}"
