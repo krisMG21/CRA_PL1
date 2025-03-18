@@ -15,7 +15,6 @@ def aplicar_algoritmo(nombre_algoritmo, sudoku, posibilidades, connector):
     # Inicializamos variables para seguimiento
     cambio = True
     sudoku_actual = sudoku.copy()
-    print(posibilidades)
     posibilidades_actual = posibilidades.copy()
     acciones_realizadas = []
     
@@ -190,6 +189,7 @@ def aplicar_reglas(sudoku, posibilidades, connector, algoritmo="default"):
             "accion": f"{accion['regla']} ({algoritmo})",
             "tiempo_ejecucion": accion.get("tiempo_ejecucion", "N/A")
         }
+
         
         # Si es la regla0, añadimos información de celdas cambiadas
         if accion["regla"] == "regla0" and "celdas_cambiadas" in accion:
@@ -204,22 +204,7 @@ def aplicar_reglas(sudoku, posibilidades, connector, algoritmo="default"):
             st.session_state.historico = historico[:indice_actual + 1]
         
         # Añadimos el nuevo estado al historial
-        st.session_state.historico.append(registro)
-        # Actualizamos el índice actual
-        st.session_state.historico_indice = len(st.session_state.historico) - 1
-    
-    # Si no hubo acciones, añadimos una entrada indicando que no hubo cambios
-    if not acciones:
-
-        # Añadimos al historial
-        historico = st.session_state.historico
-        indice_actual = st.session_state.historico_indice
         
-        # Si estamos en medio del historial, eliminamos los estados futuros
-        if indice_actual < len(historico) - 1:
-            st.session_state.historico = historico[:indice_actual + 1]
-        
-        # Añadimos el nuevo estado al historial
         st.session_state.historico.append(registro)
         # Actualizamos el índice actual
         st.session_state.historico_indice = len(st.session_state.historico) - 1
@@ -349,7 +334,6 @@ def on_regla(regla):
         algoritmo = st.session_state.algoritmo_seleccionado
         # Registramos qué algoritmo se está usando en el historial
         accion = f"resolver ({algoritmo})"
-        print("Antes de aplicar_reglas ", posibilidades)
         nuevo_sudoku, nuevas_poss = aplicar_reglas(sudoku, posibilidades, connector, algoritmo)
     elif regla == "regla0":
         accion = regla
