@@ -1,160 +1,230 @@
 import streamlit as st
 import ast
-from pyswip import Prolog
-import json
 import time
+from Prolog_connector import PrologConnector
 
-# -------------------------------
-# Función para convertir lista de sudoku a formato Prolog
-# Ejemplo: [5, '.', 4, ...]  -->  "[5, '.', 4, ...]"
-def sudoku_to_prolog(sudoku):
-    elems = []
-    for celda in sudoku:
-        if celda == '.':
-            elems.append("'.'")
-        else:
-            elems.append(str(celda))
-    return "[" + ", ".join(elems) + "]"
 
-# -------------------------------
-# Clase que encapsula las llamadas a Prolog
-class PrologConnector:
-    def __init__(self):
-        self.prolog = Prolog()
-        # Consultamos los archivos de reglas y el main.pl
-        self.prolog.consult("sudokus.pl")
-        self.prolog.consult("regla0.pl")
-        self.prolog.consult("regla1.pl")
-        self.prolog.consult("regla2.pl")
-        self.prolog.consult("regla3.pl")
-        self.prolog.consult("main.pl")
+def aplicar_algoritmo(nombre_algoritmo, sudoku, posibilidades, connector):
+    """
+    Aplica un algoritmo de resolución del sudoku basado en una secuencia de reglas.
+    Devuelve el nuevo sudoku y las nuevas posibilidades, así como un registro de las acciones realizadas.
+    """
+    # Dividimos el nombre del algoritmo para obtener la secuencia de reglas
+    secuencia = nombre_algoritmo.split("-")
     
-    def calcular_posibilidades(self, sudoku):
-        # Llama a: posibles(S, Posibles).
-        sudoku_str = sudoku_to_prolog(sudoku)
-        query = f"posibles({sudoku_str}, Posibles)."
-        resultados = list(self.prolog.query(query))
-        if resultados:
-            # Se espera que Posibles sea una lista de 81 elementos (cada uno: '.' o lista de números)
-            return resultados[0]['Posibles']
-        else:
-            return None
-
-    def aplicar_regla0(self, sudoku, posibilidades):
-        # regla debe ser "regla0", "regla1", etc.
-        sudoku_str = sudoku_to_prolog(sudoku)
-
-        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
-        query = f"regla0({sudoku_str}, {posibilidades_str}, NuevoS)."
-        resultados = list(self.prolog.query(query))
-        if resultados:
-            return resultados[0]['NuevoS']
-        else:
-            return sudoku
+    # Inicializamos variables para seguimiento
+    cambio = True
+    sudoku_actual = sudoku.copy()
+    print(posibilidades)
+    posibilidades_actual = posibilidades.copy()
+    acciones_realizadas = []
+    
+    # Índice actual en la secuencia de reglas
+    indice = 0
+    
+    # Bucle principal: seguimos aplicando reglas mientras haya cambios
+    while cambio and indice < len(secuencia):
+        # Seleccionamos la regla actual
+        regla = secuencia[indice]
         
-    def aplicar_regla1(self, posibilidades):
-        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
-        query = f"regla1({posibilidades_str}, NuevoP)."
-        resultados = list(self.prolog.query(query))
-        if resultados:
-            return resultados[0]['NuevoP']
-        else:
-            return posibilidades
+        # Aplicamos la regla correspondiente
+        sudoku_nuevo = sudoku_actual.copy()
+        posibilidades_nuevo = posibilidades_actual.copy()
         
-    def aplicar_regla2(self, posibilidades):
-        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
-        query = f"regla2({posibilidades_str}, NuevoP)."
-        resultados = list(self.prolog.query(query))
-        if resultados:
-            return resultados[0]['NuevoP']
-        else:
-            return posibilidades
+        # Registramos el tiempo de inicio para esta regla
+        tiempo_inicio = time.time()
         
-    def aplicar_regla3(self, posibilidades):
-        posibilidades_str = sudoku_to_prolog(posibilidades)  # en caso de ser lista plana o de listas
-        query = f"regla3({posibilidades_str}, NuevoP)."
-        resultados = list(self.prolog.query(query))
-        if resultados:
-            return resultados[0]['NuevoP']
-        else:
-            return posibilidades
-
-
-    def aplicar_reglas(self, sudoku, posibilidades, algoritmo="default"):
-        """
-        Aplica reglas para resolver el sudoku según el algoritmo seleccionado
-        
-        Args:
-            sudoku: Lista con el sudoku actual
-            posibilidades: Lista con las posibilidades para cada celda
-            algoritmo: String que define el algoritmo a utilizar
+        if regla == "R0" or regla == "0":
+            # Regla 0: Llena celdas con una única posibilidad
+            sudoku_nuevo = connector.aplicar_regla0(sudoku_actual, posibilidades_actual)
+            posibilidades_nuevo = connector.calcular_posibilidades(sudoku_nuevo)
             
-        Returns:
-            nuevo_sudoku, nuevas_posibilidades
-        """
-        # Comportamiento predeterminado (algoritmo original)
-        if algoritmo == "default":
-            sudoku_str = sudoku_to_prolog(sudoku)
-            posibilidades_str = sudoku_to_prolog(posibilidades)
-            query = f"aplicar_reglas({sudoku_str}, {posibilidades_str}, NuevoS, NuevoP)."
-            resultados = list(self.prolog.query(query))
-            if resultados:
-                return resultados[0]['NuevoS'], resultados[0]['NuevoP']
-            else:
-                return sudoku, posibilidades
+            # Calculamos el tiempo de ejecución de esta regla en milisegundos
+            tiempo_ejecucion = int((time.time() - tiempo_inicio) * 1000)
+            
+            # Verificamos si hubo cambios
+            if sudoku_nuevo != sudoku_actual:
+                # Guardamos la acción realizada
+                acciones_realizadas.append({
+                    "regla": "regla0",
+                    "sudoku_antes": sudoku_actual.copy(),
+                    "sudoku_despues": sudoku_nuevo.copy(),
+                    "posibilidades_antes": posibilidades_actual.copy(),
+                    "posibilidades_despues": posibilidades_nuevo.copy(),
+                    "celdas_cambiadas": sum(1 for i in range(len(sudoku_actual)) if sudoku_actual[i] != sudoku_nuevo[i]),
+                    "tiempo_ejecucion": tiempo_ejecucion
+                })
+                
+                # Actualizamos el estado actual
+                sudoku_actual = sudoku_nuevo.copy()
+                posibilidades_actual = posibilidades_nuevo.copy()
+                
+                # Reiniciamos el índice para volver a la primera regla
+                indice = 0
+                cambio = True
+                continue
+            
+        elif regla == "R1" or regla == "1":
+            # Regla 1: Reduce posibilidades en filas
+            posibilidades_nuevo = connector.aplicar_regla1(posibilidades_actual)
+            
+            # Calculamos el tiempo de ejecución de esta regla en milisegundos
+            tiempo_ejecucion = int((time.time() - tiempo_inicio) * 1000)
+            
+            # Verificamos si hubo cambios
+            if posibilidades_nuevo != posibilidades_actual:
+                # Guardamos la acción realizada
+                acciones_realizadas.append({
+                    "regla": "regla1",
+                    "sudoku_antes": sudoku_actual.copy(),
+                    "sudoku_despues": sudoku_actual.copy(),
+                    "posibilidades_antes": posibilidades_actual.copy(),
+                    "posibilidades_despues": posibilidades_nuevo.copy(),
+                    "tiempo_ejecucion": tiempo_ejecucion
+                })
+                
+                # Actualizamos el estado actual
+                posibilidades_actual = posibilidades_nuevo.copy()
+                
+                # Reiniciamos el índice para volver a la primera regla
+                indice = 0
+                cambio = True
+                continue
+            
+        elif regla == "R2" or regla == "2":
+            # Regla 2: Reduce posibilidades en columnas
+            posibilidades_nuevo = connector.aplicar_regla2(posibilidades_actual)
+            
+            # Calculamos el tiempo de ejecución de esta regla en milisegundos
+            tiempo_ejecucion = int((time.time() - tiempo_inicio) * 1000)
+            
+            # Verificamos si hubo cambios
+            if posibilidades_nuevo != posibilidades_actual:
+                # Guardamos la acción realizada
+                acciones_realizadas.append({
+                    "regla": "regla2",
+                    "sudoku_antes": sudoku_actual.copy(),
+                    "sudoku_despues": sudoku_actual.copy(),
+                    "posibilidades_antes": posibilidades_actual.copy(),
+                    "posibilidades_despues": posibilidades_nuevo.copy(),
+                    "tiempo_ejecucion": tiempo_ejecucion
+                })
+                
+                # Actualizamos el estado actual
+                posibilidades_actual = posibilidades_nuevo.copy()
+                
+                # Reiniciamos el índice para volver a la primera regla
+                indice = 0
+                cambio = True
+                continue
+            
+        elif regla == "R3" or regla == "3":
+            # Regla 3: Reduce posibilidades en bloques 3x3
+            posibilidades_nuevo = connector.aplicar_regla3(posibilidades_actual)
+            
+            # Calculamos el tiempo de ejecución de esta regla en milisegundos
+            tiempo_ejecucion = int((time.time() - tiempo_inicio) * 1000)
+            
+            # Verificamos si hubo cambios
+            if posibilidades_nuevo != posibilidades_actual:
+                # Guardamos la acción realizada
+                acciones_realizadas.append({
+                    "regla": "regla3",
+                    "sudoku_antes": sudoku_actual.copy(),
+                    "sudoku_despues": sudoku_actual.copy(),
+                    "posibilidades_antes": posibilidades_actual.copy(),
+                    "posibilidades_despues": posibilidades_nuevo.copy(),
+                    "tiempo_ejecucion": tiempo_ejecucion
+                })
+                
+                # Actualizamos el estado actual
+                posibilidades_actual = posibilidades_nuevo.copy()
+                
+                # Reiniciamos el índice para volver a la primera regla
+                indice = 0
+                cambio = True
+                continue
         
-        # Algoritmo de fuerza bruta
-        elif algoritmo == "fuerza_bruta":
-            # Implementación de placeholder - aquí iría la verdadera implementación
-            # de un algoritmo de fuerza bruta
-            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de fuerza bruta"}
-            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
-        
-        # Algoritmo de backtracking
-        elif algoritmo == "backtracking":
-            # Implementación de placeholder - aquí iría la verdadera implementación
-            # de un algoritmo de backtracking
-            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de backtracking"}
-            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
-        
-        # Algoritmo de dancing links
-        elif algoritmo == "dancing_links":
-            # Implementación de placeholder - aquí iría la verdadera implementación
-            # de un algoritmo de dancing links (DLX)
-            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de Dancing Links (DLX)"}
-            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
-        
-        # Algoritmo de simulated annealing
-        elif algoritmo == "simulated_annealing":
-            # Implementación de placeholder - aquí iría la verdadera implementación
-            # de un algoritmo de simulated annealing
-            st.session_state.mensaje = {"tipo": "info", "texto": "Utilizando algoritmo de Simulated Annealing"}
-            return self.aplicar_reglas(sudoku, posibilidades)  # Por ahora, usa el método default
-        
-        # Si el algoritmo no es reconocido, usar el default
-        else:
-            st.warning(f"Algoritmo '{algoritmo}' no reconocido. Usando algoritmo predeterminado.")
-            return self.aplicar_reglas(sudoku, posibilidades)
+        # Si llegamos aquí, la regla actual no produjo cambios
+        indice += 1
+        if indice >= len(secuencia):
+            # Si hemos probado todas las reglas y no hubo cambios, terminamos
+            cambio = False
+    
+    # Devolvemos el sudoku final, las posibilidades finales y la lista de acciones realizadas
+    return sudoku_actual, posibilidades_actual, acciones_realizadas
 
-    def validar_movimiento(self, sudoku, index, valor):
-        """
-        Para validar un movimiento, primero se calculan las posibilidades y se comprueba
-        que el valor ingresado se encuentre entre las opciones de la celda.
-        """
-        posibilidades = self.calcular_posibilidades(sudoku)
-        # La variable 'posibilidades' es una lista de 81 elementos. Para la celda ya llena se devuelve '.'
-        celda_posibles = posibilidades[index]
-        # Si la celda no está vacía, no se permite el cambio
-        if sudoku[index] != '.':
-            return False, f"La celda ya contiene {sudoku[index]}"
-        try:
-            valor_int = int(valor)
-        except:
-            return False, "Debe ingresar un número entre 1 y 9"
-        if valor_int in celda_posibles:
-            return True, "Movimiento válido"
-        else:
-            return False, f"El número {valor_int} no es una posibilidad en esa celda.\nOpciones: {celda_posibles}"
+def aplicar_reglas(sudoku, posibilidades, connector, algoritmo="default"):
+    # Algoritmos disponibles
+    algoritmos_disponibles = {
+        "default": "R0-1-2-3",  # Algoritmo predeterminado
+        "R0-1-2-3": "R0-1-2-3",
+        "R0-2-3-1": "R0-2-3-1",
+        "R0-3-2-1": "R0-3-2-1",
+        "R1-2-3-0": "R1-2-3-0",
+        "R2-3-1-0": "R2-3-1-0",
+        "R3-2-1-0": "R3-2-1-0",
+        "R0-1": "R0-1",
+        "R0-2": "R0-2",
+        "R0-3": "R0-3"
+    }
+    
+    # Verificamos si el algoritmo existe
+    if algoritmo not in algoritmos_disponibles:
+        st.warning(f"Algoritmo '{algoritmo}' no reconocido. Usando algoritmo predeterminado.")
+        algoritmo = "default"
+    
+    # Obtenemos la secuencia de reglas del algoritmo
+    secuencia_algoritmo = algoritmos_disponibles[algoritmo]
+    
+    # Aplicamos el algoritmo
+    nuevo_sudoku, nuevas_posibilidades, acciones = aplicar_algoritmo(
+        secuencia_algoritmo, sudoku, posibilidades, connector)
+    
+    # Registramos las acciones en el historial
+    for accion in acciones:
+        # Creamos un registro para el historial
+        registro = {
+            "sudoku": accion["sudoku_despues"],
+            "posibilidades": accion["posibilidades_despues"],
+            "accion": f"{accion['regla']} ({algoritmo})",
+            "tiempo_ejecucion": accion.get("tiempo_ejecucion", "N/A")
+        }
+        
+        # Si es la regla0, añadimos información de celdas cambiadas
+        if accion["regla"] == "regla0" and "celdas_cambiadas" in accion:
+            registro["celdas_llenas"] = accion["celdas_cambiadas"]
+        
+        # Añadimos al historial
+        historico = st.session_state.historico
+        indice_actual = st.session_state.historico_indice
+        
+        # Si estamos en medio del historial, eliminamos los estados futuros
+        if indice_actual < len(historico) - 1:
+            st.session_state.historico = historico[:indice_actual + 1]
+        
+        # Añadimos el nuevo estado al historial
+        st.session_state.historico.append(registro)
+        # Actualizamos el índice actual
+        st.session_state.historico_indice = len(st.session_state.historico) - 1
+    
+    # Si no hubo acciones, añadimos una entrada indicando que no hubo cambios
+    if not acciones:
+
+        # Añadimos al historial
+        historico = st.session_state.historico
+        indice_actual = st.session_state.historico_indice
+        
+        # Si estamos en medio del historial, eliminamos los estados futuros
+        if indice_actual < len(historico) - 1:
+            st.session_state.historico = historico[:indice_actual + 1]
+        
+        # Añadimos el nuevo estado al historial
+        st.session_state.historico.append(registro)
+        # Actualizamos el índice actual
+        st.session_state.historico_indice = len(st.session_state.historico) - 1
+    
+    return nuevo_sudoku, nuevas_posibilidades
 
 # -------------------------------
 # Función para parsear el archivo sudoku (formato: lista de 81 elementos)
@@ -279,7 +349,8 @@ def on_regla(regla):
         algoritmo = st.session_state.algoritmo_seleccionado
         # Registramos qué algoritmo se está usando en el historial
         accion = f"resolver ({algoritmo})"
-        nuevo_sudoku, nuevas_poss = connector.aplicar_reglas(sudoku, posibilidades, algoritmo)
+        print("Antes de aplicar_reglas ", posibilidades)
+        nuevo_sudoku, nuevas_poss = aplicar_reglas(sudoku, posibilidades, connector, algoritmo)
     elif regla == "regla0":
         accion = regla
         nuevo_sudoku = connector.aplicar_regla0(sudoku, posibilidades)
@@ -303,7 +374,7 @@ def on_regla(regla):
     
     # Calculamos el tiempo de ejecución en milisegundos
     tiempo_fin = time.time()
-    tiempo_ejecucion = round((tiempo_fin - tiempo_inicio) * 1000, 2)  # en milisegundos
+    tiempo_ejecucion = round((tiempo_fin - tiempo_inicio) * 1000, 0)  # en milisegundos
     st.session_state.tiempo_ejecucion = tiempo_ejecucion
     
     st.session_state.sudoku = nuevo_sudoku
@@ -314,7 +385,7 @@ def on_regla(regla):
         celdas_despues = contar_celdas_llenas(nuevo_sudoku)
         celdas_llenadas = celdas_despues - celdas_antes
         guardar_estado_en_historial(accion, celdas_llenadas)
-    else:
+    elif "regla" in regla: 
         guardar_estado_en_historial(accion)
     
     st.session_state.mensaje = {"tipo": "info", "texto": f"Se ha aplicado {accion} al sudoku (tiempo: {tiempo_ejecucion} ms)"}
@@ -411,7 +482,6 @@ def render_sudoku():
             with cols[col_index]:
                 if esta_vacia:
                     # Construimos el placeholder con las posibilidades actuales
-                    print(posibilidades)
                     placeholder = format_posibilidades(posibilidades[idx])
                     
                     # Para las celdas vacías, mostramos un input con las posibilidades como placeholder
@@ -461,7 +531,7 @@ def plot_historial_data():
             tiempo_ejecucion = registro.get("tiempo_ejecucion", 0)
             if tiempo_ejecucion == "N/A":
                 tiempo_ejecucion = 0
-                
+
             datos.append({
                 "Paso": i + 1,
                 "Acción": accion,
@@ -654,13 +724,12 @@ def render_historial():
         st.markdown("#### Resumen de acciones")
         
         # Encabezados de la tabla
-        cols = st.columns([1,3,3,3,3,4])
+        cols = st.columns([2,3,4,4,5])
         with cols[0]: st.markdown("**Paso**")
         with cols[1]: st.markdown("**Acción**")
         with cols[2]: st.markdown("**Posibilidades únicas**")
-        with cols[3]: st.markdown("**Celdas resueltas**")
-        with cols[4]: st.markdown("**Tiempo (ms)**")
-        with cols[5]: st.markdown("**Detalles**")
+        with cols[3]: st.markdown("**Tiempo (ms)**")
+        with cols[4]: st.markdown("**Detalles**")
         
         # Filas con botones
         for original_idx in reversed(range(len(st.session_state.historico))):
@@ -678,7 +747,7 @@ def render_historial():
             tiempo = registro.get("tiempo_ejecucion", "N/A")
             
             # Crear fila
-            cols = st.columns([1,3,3,3,3,4])
+            cols = st.columns([2,3,4,4,5])
             with cols[0]:
                 # Botón de navegación con estilo condicional
                 btn_style = "primary" if is_current else "secondary"
@@ -694,9 +763,8 @@ def render_historial():
             # Resto de columnas
             with cols[1]: st.write(registro["accion"])
             with cols[2]: st.write(posibilidades_un_valor)
-            with cols[3]: st.write(celdas_resueltas if registro["accion"] == "regla0" else "-")
-            with cols[4]: st.write(f"{tiempo} ms" if isinstance(tiempo, (int, float)) else tiempo)
-            with cols[5]: 
+            with cols[3]: st.write(f"{tiempo} ms" if isinstance(tiempo, (int, float)) else tiempo)
+            with cols[4]: 
                 if registro["accion"] == "regla0":
                     st.write(f"Resueltas: {celdas_resueltas}")
                 elif registro["accion"] == "input_usuario":
@@ -777,7 +845,7 @@ def main():
                 st.session_state.historico_indice = 0
                 
                 # Guardamos el estado inicial en el histórico
-                guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
+                #guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
                 
                 st.success("Sudoku cargado correctamente.")
     
