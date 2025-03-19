@@ -1,6 +1,10 @@
 import streamlit as st
 import ast
 import time
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+        
 from Prolog_connector import PrologConnector
 
 
@@ -490,10 +494,7 @@ def render_sudoku():
 
 def plot_historial_data():
     if len(st.session_state.historico) > 0:
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        import numpy as np
-        
+
         # Extraemos los datos para el gráfico
         datos = []
         for i, registro in enumerate(st.session_state.historico):
@@ -529,7 +530,21 @@ def plot_historial_data():
         
         # Añadimos columnas acumuladas para los valores que lo requieren
         df["Posibilidades 1 valor (acumulado)"] = df["Posibilidades 1 valor"].cumsum()
-        df["Casillas resueltas (acumulado)"] = df["Casillas resueltas"].cumsum()
+        df["Tiempo (ms) (acumulado)"] = df["Tiempo (ms)"].cumsum()
+        
+        # Extraemos la regla básica (R0, R1, R2, R3, etc.)
+        df["Regla base"] = df["Acción"].apply(lambda x: x.split()[0] if len(x.split()) > 0 else x)
+        
+        # Creamos un DataFrame resumido por regla
+        df_por_regla = df.groupby("Regla base").agg({
+            "Posibilidades 1 valor": "sum",
+            "Tiempo (ms)": "sum"
+        }).reset_index()
+        
+        # Calculamos la eficiencia (posibilidades/ms) por regla
+        df_por_regla["Eficiencia (pos/ms)"] = df_por_regla["Posibilidades 1 valor"] / df_por_regla["Tiempo (ms)"]
+        # Reemplazamos NaN o inf por 0
+        df_por_regla["Eficiencia (pos/ms)"] = df_por_regla["Eficiencia (pos/ms)"].fillna(0).replace([np.inf, -np.inf], 0)
         
         # Ofrecemos la visualización
         st.markdown("### Visualización de datos")
@@ -537,14 +552,14 @@ def plot_historial_data():
         # Opciones de visualización
         opcion_grafico = st.selectbox(
             "Selecciona un tipo de gráfico:",
-            ["Posibilidades y Casillas (acumulado)", "Tiempo de ejecución"]
+            ["Posibilidades", "Tiempo de ejecución", "Posibilidades por regla", "Eficiencia por regla"]
         )
         
         # Configuración común para los gráficos
         plt.style.use('seaborn-v0_8-darkgrid')
         
         # Generamos el gráfico seleccionado
-        if opcion_grafico == "Posibilidades y Casillas (acumulado)":
+        if opcion_grafico == "Posibilidades":
             fig, ax = plt.subplots(figsize=(12, 6))
             
             # Gráfico para posibilidades con 1 valor (acumulado)
@@ -552,24 +567,16 @@ def plot_historial_data():
                     marker='o', linestyle='-', linewidth=2, markersize=8, 
                     color='#1f77b4', label='Posibilidades con 1 valor (acumulado)')
             
-            # Gráfico para casillas resueltas (acumulado)
-            ax.plot(df["Paso"], df["Casillas resueltas (acumulado)"], 
-                    marker='s', linestyle='-', linewidth=2, markersize=8, 
-                    color='#ff7f0e', label='Casillas resueltas (acumulado)')
-            
-            # Añadimos los valores no acumulados como puntos más pequeños
+            # Gráfico para posibilidades con 1 valor (por paso)
             ax2 = ax.twinx()
             ax2.plot(df["Paso"], df["Posibilidades 1 valor"], 
                     marker='o', linestyle='--', linewidth=1, markersize=5, 
                     color='#17becf', label='Posibilidades con 1 valor (por paso)')
-            ax2.plot(df["Paso"], df["Casillas resueltas"], 
-                    marker='s', linestyle='--', linewidth=1, markersize=5, 
-                    color='#d62728', label='Casillas resueltas (por paso)')
             
             # Configuramos los ejes
             ax.set_xlabel("Paso", fontsize=12)
-            ax.set_ylabel("Valores acumulados", fontsize=12)
-            ax2.set_ylabel("Valores por paso", fontsize=12)
+            ax.set_ylabel("Posibilidades acumuladas", fontsize=12)
+            ax2.set_ylabel("Posibilidades por paso", fontsize=12)
             ax.grid(True, linestyle='--', alpha=0.7)
             
             # Configuramos los límites de los ejes
@@ -582,20 +589,26 @@ def plot_historial_data():
             ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=10)
             
             # Título del gráfico
-            plt.title("Evolución de posibilidades y casillas resueltas", fontsize=14)
+            plt.title("Evolución de posibilidades con un solo valor", fontsize=14)
             
-        else:  # Tiempo de ejecución
+        elif opcion_grafico == "Tiempo de ejecución":
             fig, ax = plt.subplots(figsize=(12, 6))
             
-            # Gráfico para tiempo de ejecución (no acumulado)
-            ax.plot(df["Paso"], df["Tiempo (ms)"], 
+            # Gráfico para tiempo de ejecución (acumulado)
+            ax.plot(df["Paso"], df["Tiempo (ms) (acumulado)"], 
                     marker='o', linestyle='-', linewidth=2, markersize=8, 
-                    color='#2ca02c', label='Tiempo de ejecución')
+                    color='#1f77b4', label='Tiempo de ejecución (acumulado)')
             
-            # Añadimos etiquetas con los valores en cada punto
+            # Gráfico para tiempo de ejecución (por paso)
+            ax2 = ax.twinx()
+            ax2.plot(df["Paso"], df["Tiempo (ms)"], 
+                    marker='o', linestyle='--', linewidth=1, markersize=5, 
+                    color='#17becf', label='Tiempo de ejecución (por paso)')
+            
+            # Añadimos etiquetas con los valores en cada punto para el tiempo por paso
             for i, txt in enumerate(df["Tiempo (ms)"]):
                 if txt > 0:  # Solo mostramos etiquetas para valores positivos
-                    ax.annotate(f"{txt} ms", 
+                    ax2.annotate(f"{txt} ms", 
                                 (df["Paso"][i], df["Tiempo (ms)"][i]),
                                 textcoords="offset points", 
                                 xytext=(0,10), 
@@ -604,21 +617,99 @@ def plot_historial_data():
             
             # Configuramos los ejes
             ax.set_xlabel("Paso", fontsize=12)
-            ax.set_ylabel("Tiempo (ms)", fontsize=12)
+            ax.set_ylabel("Tiempo acumulado (ms)", fontsize=12)
+            ax2.set_ylabel("Tiempo por paso (ms)", fontsize=12)
             ax.grid(True, linestyle='--', alpha=0.7)
             
             # Configuramos los límites de los ejes
             ax.set_xlim(0.5, len(df) + 0.5)
             ax.set_xticks(np.arange(1, len(df) + 1))
             
-            # Añadimos las acciones realizadas en cada paso como etiquetas en el eje x
-            plt.xticks(rotation=45, ha='right')
-            
-            # Leyenda
-            ax.legend(loc='upper left', fontsize=10)
+            # Combinamos las leyendas de ambos ejes
+            lines1, labels1 = ax.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=10)
             
             # Título del gráfico
-            plt.title("Tiempo de ejecución por paso", fontsize=14)
+            plt.title("Evolución del tiempo de ejecución", fontsize=14)
+            
+        elif opcion_grafico == "Posibilidades por regla":
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Ordenamos las reglas para que se muestren en orden lógico
+            orden_reglas = ['regla0', 'regla1', 'regla2', 'regla3', 'resolver', 'input_usuario']
+            df_por_regla_ordenado = df_por_regla.copy()
+            
+            # Asignamos un índice numérico para ordenar
+            def get_order(regla):
+                try:
+                    return orden_reglas.index(regla)
+                except ValueError:
+                    return len(orden_reglas)
+            
+            df_por_regla_ordenado['orden'] = df_por_regla_ordenado['Regla base'].apply(get_order)
+            df_por_regla_ordenado = df_por_regla_ordenado.sort_values('orden')
+            
+            # Creamos el histograma
+            bars = ax.bar(df_por_regla_ordenado["Regla base"], 
+                         df_por_regla_ordenado["Posibilidades 1 valor"],
+                         color='#1f77b4', alpha=0.8)
+            
+            # Añadimos etiquetas con los valores en cada barra
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{int(height)}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),  # 3 puntos de desplazamiento vertical
+                            textcoords="offset points",
+                            ha='center', va='bottom', fontsize=9)
+            
+            # Configuramos los ejes
+            ax.set_xlabel("Regla", fontsize=12)
+            ax.set_ylabel("Posibilidades con 1 valor (total)", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7, axis='y')
+            
+            # Título del gráfico
+            plt.title("Posibilidades con 1 valor generadas por cada regla", fontsize=14)
+            
+        else:  # Eficiencia por regla
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Ordenamos las reglas para que se muestren en orden lógico
+            orden_reglas = ['regla0', 'regla1', 'regla2', 'regla3', 'resolver', 'input_usuario']
+            df_por_regla_ordenado = df_por_regla.copy()
+            
+            # Asignamos un índice numérico para ordenar
+            def get_order(regla):
+                try:
+                    return orden_reglas.index(regla)
+                except ValueError:
+                    return len(orden_reglas)
+            
+            df_por_regla_ordenado['orden'] = df_por_regla_ordenado['Regla base'].apply(get_order)
+            df_por_regla_ordenado = df_por_regla_ordenado.sort_values('orden')
+            
+            # Creamos el histograma
+            bars = ax.bar(df_por_regla_ordenado["Regla base"], 
+                         df_por_regla_ordenado["Eficiencia (pos/ms)"],
+                         color='#2ca02c', alpha=0.8)
+            
+            # Añadimos etiquetas con los valores en cada barra
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:.2f}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),  # 3 puntos de desplazamiento vertical
+                            textcoords="offset points",
+                            ha='center', va='bottom', fontsize=9)
+            
+            # Configuramos los ejes
+            ax.set_xlabel("Regla", fontsize=12)
+            ax.set_ylabel("Eficiencia (posibilidades/ms)", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7, axis='y')
+            
+            # Título del gráfico
+            plt.title("Eficiencia de cada regla (posibilidades por ms)", fontsize=14)
         
         # Ajustamos el layout para que no se corten los elementos
         plt.tight_layout()
@@ -627,7 +718,11 @@ def plot_historial_data():
         st.pyplot(fig)
         
         # Ofrecemos el DataFrame para análisis adicional
+        st.subheader("Datos por paso")
         st.dataframe(df)
+        
+        st.subheader("Resumen por regla")
+        st.dataframe(df_por_regla)
 
 def guardar_estado_en_historial(accion, celdas_llenas=None):
     actual_sudoku = st.session_state.sudoku.copy()
@@ -902,6 +997,8 @@ def main():
                 "R1-2-3-0": "R1-2-3-0",
                 "R1-0-2-0-3-0": "R1-0-2-0-3-0",
                 "R3-0-2-0-1-0": "R3-0-2-0-1-0",
+                "R0-1": "R0-1",
+                "R0-2": "R0-2",
             }
             
             st.selectbox(
