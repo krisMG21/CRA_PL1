@@ -24,7 +24,7 @@ regla3(P, NewP) :-
 tripletas_filas(P, NewP) :-
     split_filas(P, Rows),
     procesar_listas_3(Rows, NewRows),
-    aplanar_filas(NewRows, NewP).
+    split_filas(NewP, NewRows).
 
 % Aplica la eliminación en columnas: se transpone,
 % se procesa como filas y se transpone de vuelta.
@@ -32,7 +32,7 @@ tripletas_columnas(P, NewP) :-
     transponer(P, TP),
     split_filas(TP, Columns),
     procesar_listas_3(Columns, NewColumns),
-    aplanar_filas(NewColumns, NewTP),
+    split_filas(NewTP, NewColumns),
     transponer(NewTP, NewP).
 
 % Aplica la eliminación en cuadrantes
@@ -40,8 +40,8 @@ tripletas_cuadrantes(P, NewP) :-
     split_filas(P, Rows),
     split_cuadrantes(Rows, Quads),
     procesar_listas_3(Quads, NewQuads),
-    aplanar_cuadrantes(NewQuads, NewRows),
-    aplanar_filas(NewRows, NewP).
+    split_cuadrantes(NewRows, NewQuads),
+    split_filas(NewP, NewRows).
 
 procesar_listas_3([], []).
 procesar_listas_3([Group|Groups], [NewGroup|NewGroups]) :-

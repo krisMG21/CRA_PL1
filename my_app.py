@@ -829,7 +829,7 @@ def main():
                 st.session_state.historico_indice = 0
                 
                 # Guardamos el estado inicial en el histórico
-                #guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
+                guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
                 
                 st.success("Sudoku cargado correctamente.")
     

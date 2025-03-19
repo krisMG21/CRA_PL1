@@ -26,15 +26,10 @@ split_filas(P, [Row|Rows]) :-       % FUNCIONA
     append(Row, Rest, P),
     split_filas(Rest, Rows).
 
-aplanar_filas([], []).
-aplanar_filas([Row|Rows], Flat) :-  % FUNCIONA
-    aplanar_filas(Rows, FlatRest),
-    append(Row, FlatRest, Flat).
-
 parejas_filas(P, NewP) :-       
     split_filas(P, Rows),
     procesar_listas(Rows, NewRows),
-    aplanar_filas(NewRows, NewP).
+    split_filas(NewP, NewRows).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2. Eliminación sobre columnas
@@ -43,7 +38,7 @@ parejas_filas(P, NewP) :-
 transponer(Plano, Transpuesto) :-       % FUNCIONA
     split_filas(Plano, Matriz),
     transponer_matriz(Matriz, MatrizT),
-    aplanar_filas(MatrizT, Transpuesto).
+    split_filas(Transpuesto, MatrizT).
 
 transponer_matriz([], []).              % FUNCIONA
 transponer_matriz([[]|_], []).
@@ -56,9 +51,7 @@ descomponer_fila('.', '.', []).
 
 parejas_columnas(P, NewP) :-    % FUNCIONA
     transponer(P, TP),
-    split_filas(TP, Columns),
-    procesar_listas(Columns, NewColumns),
-    aplanar_filas(NewColumns, NewTP),
+    parejas_filas(TP, NewTP),
     transponer(NewTP, NewP).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,16 +81,6 @@ split_row(Row, Q1, Q2, Q3) :-   % FUNCIONA
     append(Q1, Q2, Temp),
     append(Temp, Q3, Row).
 
-aplanar_cuadrantes([], []).
-aplanar_cuadrantes([Q1,Q2,Q3|Rest], [R1,R2,R3|Rows]) :- % FUNCIONA
-    split_cuad_to_filas(Q1, R1a, R2a, R3a),
-    split_cuad_to_filas(Q2, R1b, R2b, R3b),
-    split_cuad_to_filas(Q3, R1c, R2c, R3c),
-    append(R1a, R1b, R1ab), append(R1ab, R1c, R1),
-    append(R2a, R2b, R2ab), append(R2ab, R2c, R2),
-    append(R3a, R3b, R3ab), append(R3ab, R3c, R3),
-    aplanar_cuadrantes(Rest, Rows).
-
 split_cuad_to_filas([], [], [], []).    % FUNCIONA
 split_cuad_to_filas([A,B,C,D,E,F,G,H,I|Rest], [A,B,C|R1], [D,E,F|R2], [G,H,I|R3]) :-
     split_cuad_to_filas(Rest, R1, R2, R3).
@@ -106,8 +89,8 @@ parejas_cuadrantes(P, NewP) :-  % FUNCIONA
     split_filas(P, Rows),
     split_cuadrantes(Rows, Quads),
     procesar_listas(Quads, NewQuads),
-    aplanar_cuadrantes(NewQuads, NewRows),
-    aplanar_filas(NewRows, NewP).
+    split_cuadrantes(NewRows, NewQuads),
+    split_filas(NewP, NewRows).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Procesamiento de grupos (filas/columnas/cuadrantes)
@@ -137,13 +120,13 @@ encontrar_todos_los_pares(Group, UniquePairs) :-    % FUNCIONA
          sort(X, SP),
          count_occurrences(SP, Group, 2)
     ), Pairs),
-    list_to_set(Pairs, UniquePairs).  % Elimina duplicados
+    eliminar_repetidos(Pairs, UniquePairs).  % Elimina duplicados
 
 % Elimina los elementos de todos los pares encontrados en las celdas no pertenecientes a pares
 eliminar_elementos_de_pares(Group, Pairs, NewGroup) :-  % FUNCIONA
     % Recoge todos los elementos de los pares
     findall(E, (member(P, Pairs), member(E, P)), Elements),
-    list_to_set(Elements, RemoveSet),  % Elimina duplicados
+    eliminar_repetidos(Elements, RemoveSet),
     maplist(eliminar_si_no_es_par(Pairs, RemoveSet), Group, NewGroup).
 
 % Predicado auxiliar para eliminar elementos si la celda no es un par válido
