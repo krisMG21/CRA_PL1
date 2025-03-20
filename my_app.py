@@ -528,9 +528,11 @@ def plot_historial_data():
                         posibilidades_un_valor += 1
             
             # Calculamos casillas resueltas
-            casillas_resueltas = 0
-            if accion == "regla0" and "celdas_llenas" in registro:
-                casillas_resueltas = registro["celdas_llenas"]
+            if i == 0:
+                casillas_resueltas = contar_celdas_llenas(registro["sudoku"])
+            else:
+                prev_sudoku = st.session_state.historico[i-1]["sudoku"]
+                casillas_resueltas = contar_celdas_llenas(registro["sudoku"]) - contar_celdas_llenas(prev_sudoku)
             
             # Añadimos el tiempo de ejecución (si existe)
             tiempo_ejecucion = registro.get("tiempo_ejecucion", 0)
