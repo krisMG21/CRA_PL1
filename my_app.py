@@ -160,18 +160,16 @@ def aplicar_algoritmo(nombre_algoritmo, sudoku, posibilidades, connector):
 def aplicar_reglas(sudoku, posibilidades, connector, algoritmo="default"):
     # Algoritmos disponibles
     algoritmos_disponibles = {
-        "default": "R0-1-2-3",  # Algoritmo predeterminado
         "R0-1-2-3": "R0-1-2-3",
         "R0-2-3-1": "R0-2-3-1",
-        "R0-3-2-1": "R0-3-2-1",
         "R1-2-3-0": "R1-2-3-0",
         "R2-3-1-0": "R2-3-1-0",
-        "R3-2-1-0": "R3-2-1-0",
+        "R0": "R0",
         "R0-1": "R0-1",
         "R0-2": "R0-2",
-        "R0-3": "R0-3"
+        "R0-3": "R0-3",
     }
-    
+
     # Verificamos si el algoritmo existe
     if algoritmo not in algoritmos_disponibles:
         st.warning(f"Algoritmo '{algoritmo}' no reconocido. Usando algoritmo predeterminado.")
@@ -946,7 +944,7 @@ def main():
                 st.session_state.historico_indice = 0
                 
                 # Guardamos el estado inicial en el histórico
-                guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
+                # guardar_estado_en_historial("inicial", contar_celdas_llenas(sudoku))
                 
                 st.success("Sudoku cargado correctamente.")
     
@@ -1024,11 +1022,13 @@ def main():
             st.markdown("### Algoritmo de resolución")
             algoritmos = {
                 "R0-1-2-3": "R0-1-2-3",
+                "R0-2-3-1": "R0-2-3-1",
                 "R1-2-3-0": "R1-2-3-0",
-                "R1-0-2-0-3-0": "R1-0-2-0-3-0",
-                "R3-0-2-0-1-0": "R3-0-2-0-1-0",
+                "R2-3-1-0": "R2-3-1-0",
+                "R0": "R0",
                 "R0-1": "R0-1",
                 "R0-2": "R0-2",
+                "R0-3": "R0-3",
             }
             
             st.selectbox(
