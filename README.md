@@ -1,3 +1,5 @@
+# CRA - PL1: 
+
 Todo el código se encuentra en los archivos .pl y .py
 
 Los sudokus de ejemplo se encuentran en la carpeta sudokus, se organizan de la siguiente forma:

@@ -305,6 +305,14 @@ def main():
             celdas += sudoku.count('.') - new_sudoku.count('.')
             rellenables += sudoku.count('.')
             total_acciones += num_acciones
+
+        for sudoku in sudokus_3:
+            pos = prolog.calcular_posibilidades(sudoku)
+            new_sudoku, num_acciones = aplicar_reglas(sudoku, pos, prolog, algo)
+            resueltos += not ('.' in new_sudoku)
+            celdas += sudoku.count('.') - new_sudoku.count('.')
+            rellenables += sudoku.count('.')
+            total_acciones += num_acciones
         
         salida += f" {resueltos} / {len(sudokus_2) + len(sudokus_3)}          | \
 {' ' * (1 - celdas // 100)}{celdas} / {rellenables}          | {total_acciones}\n"
