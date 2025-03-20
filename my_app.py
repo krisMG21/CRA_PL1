@@ -425,6 +425,28 @@ def render_sudoku():
             background-color: #333;
             text-align: center;
         }
+        /* Nuevos estilos para ajustar espaciado */
+        .main .block-container {
+            padding-right: 2rem !important;
+        }
+        
+        /* Aumentar espacio entre columnas del sudoku */
+        [data-testid="column"] {
+            margin: 0px 5px !important;
+        }
+        
+        /* Reducir padding en inputs */
+        .stTextInput input {
+            padding: 4px 8px !important;
+        }
+        
+        /* Ajustar ancho de columnas del sudoku */
+        div[data-testid="column"]:nth-of-type(1),
+        div[data-testid="column"]:nth-of-type(5),
+        div[data-testid="column"]:nth-of-type(9) {
+            width: calc(11.11% - 5px) !important;
+        }
+
         </style>
         """,
         unsafe_allow_html=True
@@ -929,7 +951,7 @@ def main():
                 st.success("Sudoku cargado correctamente.")
     
     # Crear columnas para el contenido principal y la barra lateral derecha
-    main_col, right_sidebar_col = st.columns([3, 1])
+    main_col, right_sidebar_col = st.columns([4, 1], gap="large")
     
     with main_col:
         # Texto explicativo en la parte superior
@@ -953,6 +975,14 @@ def main():
     
     # Panel lateral derecho para los botones de acción
     with right_sidebar_col:
+        st.markdown("""
+        <style>
+            div[data-testid="column"]:nth-of-type(2) {
+                padding: 0px 5px 0px 5px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
         if 'sudoku' in st.session_state and 'posibilidades' in st.session_state:
 
             st.markdown("""
