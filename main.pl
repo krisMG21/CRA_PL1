@@ -29,17 +29,42 @@ al main tal que:
 % ?- sudoku(S), fila(S, 2, Fila).
 
 % Mostrar el Sudoku en formato 9x9
-mostrar_sudoku([]) :- nl.
 mostrar_sudoku(Sudoku) :-
     mostrar_filas(Sudoku, 1).
 
+% Caso base: lista vacía
 mostrar_filas([], _).
-mostrar_filas(Sudoku, Fila) :-
-    length(FilaActual, 9), % Tomar 9 elementos
-    append(FilaActual, Resto, Sudoku), % Sacar el resto de elementos
-    write(FilaActual), nl,
-    SiguienteFila is Fila + 1,
-    mostrar_filas(Resto, SiguienteFila).
+
+% Mostrar filas con formato
+mostrar_filas(Sudoku, FilaNum) :-
+    % Extraer primera fila (9 elementos)
+    append(Fila, Resto, Sudoku),
+    length(Fila, 9),
+    
+    % Mostrar fila actual con formato
+    write(' '),
+    mostrar_fila(Fila),
+    
+    % Imprimir separador horizontal cada 3 filas
+    (FilaNum mod 3 =:= 0, FilaNum < 9 -> 
+        write('-------+-------+-------'), nl
+    ; true),
+    
+    % Procesar siguiente fila
+    Siguiente is FilaNum + 1,
+    mostrar_filas(Resto, Siguiente).
+
+% Mostrar una fila dividida en 3 grupos de 3 elementos
+mostrar_fila(Fila) :-
+    append(G1, Resto1, Fila), length(G1, 3),
+    append(G2, G3, Resto1), length(G2, 3),
+    mostrar_grupo(G1), write('|'),
+    mostrar_grupo(G2), write('|'),
+    mostrar_grupo(G3), nl.
+
+% Mostrar grupo de 3 elementos con espacios
+mostrar_grupo([A,B,C]) :-
+    format(' ~w ~w ~w ', [A,B,C]).
 
 % DEVOLVER FILA DE SUDOKU
 fila([A, B, C, D, E, F, G, H, I |_], 0, [A, B, C, D, E, F, G, H , I]).
